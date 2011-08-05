@@ -81,6 +81,12 @@ unsigned int convertCharToIndex(char base){//somesort of inline here?
 	base=='G'?2:
 	base=='T'?3:99;
 }
+char convertIndexToChar(int index){//somesort of inline here?
+	return index==0?'A':
+	index==1?'C':
+	index==2?'G':
+	index==3?'T':'N';
+}
 
 
 struct node* buildTree(char *s1) {
@@ -159,16 +165,18 @@ char* readFastq(char *fileName){
 
 
 //make recursive with minPos and maxMisses (and currentNode)? then call on each substring (and mismatch)?
-int* findStringInTree(struct node *tree,char *query,struct node *currentNode, int pos, unsigned int maxGap, unsigned int maxMismatch, unsigned int maxInsert){
+//return -matches or 1 if we made it
+int findStringInTree(struct node *tree,char *query,struct node *currentNode, int pos, unsigned int maxMismatch){ // unsigned int maxGap, unsigned int maxMismatch, unsigned int maxInsert){
+	int match;
 	//iterators
-	unsigned int i;
+	unsigned int i,k;
 	int j;
+
 	unsigned int depth,charId;
 	int tmp;
-	int *match=malloc(sizeof(int)*5); //matches, completed, mismatches, insertions, splices (should probably have deletions too)
-	for(i=0;i<5;i++)match[i]=0;
+	//int *match=malloc(sizeof(int)*4); //matches, completed, mismatches, splices (should probably have insertions, deletions too)
+	//for(i=0;i<5;i++)match[i]=0;
 	unsigned int n=strlen(query);
-	struct node *currentNode=tree;
 	//printf("Pointer size: %lu\n",sizeof(int*));
 	//store binary for nodes to check out if we need to check splicing (don't need to check if our min pos didn't change)
 	int *pathPos=malloc(sizeof(int)*(n+1));//if we start storing multiples, e.g. down multiple paths, then we'll need more
@@ -176,13 +184,15 @@ int* findStringInTree(struct node *tree,char *query,struct node *currentNode, in
 	//store pointers to nodes to check mismatch
 	struct node **path=malloc(sizeof(struct node*)*(n+1));//if we start storing multiples, e.g. down multiple paths, then we'll need more
 	unsigned int nPath=0;
-	//alignment scores
-	int **spliceScore;
-	int *mismatchScore[4];
 	depth=0;
+	int bestMatch;
+	char base, tmpChar;
+
+	//printf("Running on char %d string with %d mismatch.\n",n,maxMismatch);
 	
-	currentMin[0]=pos; //replace these two with arguments?
-	currentPath[0]=tree; //replace these two with arguments?
+	pathPos[0]=pos; 
+	path[0]=currentNode; 
+	bestMatch=1;//Really shouldn't default to success
 	for(i=0;i<n;i++){
 		charId=convertCharToIndex(query[i]);
 		//printf("i:%d ",i);
@@ -202,30 +212,53 @@ int* findStringInTree(struct node *tree,char *query,struct node *currentNode, in
 			path[depth]=currentNode;
 			pathPos[depth]=pos;
 		}else{
+			//printf("Break at depth %d",depth,i);
+			bestMatch=-depth; //kind of dangerous probably should do another way
 			//printf("Break\n");
 			//break in string
-			for(j=depth;j>=0;j--){
-				if(j>0&&pathPos[j]-pathPos[j-1]>1){
-					if(maxMismatch>0){
+			if(maxMismatch>0){
+				for(j=depth;j>=0;j--){
+					//printf("j:%d ",j);
+					//splicing
+					if(pathPos[j]-pathPos[j-1]>1&&j>0||j==depth){
+						//jump to root and try to match the rest, respecting the position of this match
+						tmp=findStringInTree(tree,&query[j],tree,pathPos[j],maxMismatch-1);
+						//printf("Splice %d %s<----\n",tmp,&query[j]);
+						if(tmp>0){
+							bestMatch=1;
+							break; //depth loop
+						}
+						tmp=tmp-j;
+						if(tmp<bestMatch)bestMatch=tmp;
 					}
-					if(maxGap>0){
-						spliceScore=startNewSplice();
+					//mismatch
+					tmpChar=query[j];
+					for(k=0;k<4;k++){
+						base=convertIndexToChar(k);
+						if(tmpChar==base)continue;
+						//substitute char in string here
+						query[j]=base;
+						//printf("%s",&query[j]);
+						tmp=findStringInTree(tree,&query[j],path[j],pathPos[j],maxMismatch-1); //find best match for remainder of the string with base substituted at the next position
+						if(tmp>0){
+							bestMatch=1;
+							break; //ACTG loop
+						}
+						tmp=tmp-j;
+						//printf("Mismatch %c->%c %d  Best:%d",tmpChar,base,tmp,bestMatch);
+						if(tmp<bestMatch)bestMatch=tmp;
 					}
+					query[j]=tmpChar;
+					//printf("\n");
+					if(bestMatch>0)break;//depth loop
 				}
 			}
-
-			gaps++;
-			i--;
-			currentNode=tree;
-			depth=0;
+			break; //could do an insertion here
 		}
-		//printf("Iter:%d Pos:%d-%d Depth:%d Gaps:%d\n",i,pos,currentNode->pos[currentNode->nPos-1],depth,gaps);
-		if(gaps>=gapCutoff)break;
 	}
-	if(gaps==gapCutoff)gaps=999;
-	free(isJump);
-	free(currentPath);
-	return(gaps);
+	free(path);
+	free(pathPos);
+	return(bestMatch);
 }
 
 
@@ -254,6 +287,7 @@ int checkPossibleMatch(struct node *tree,char* query, int nSegments){
 /*
  * k mismatches, l gaps means that divide n-base query into n/(k+l+1) at least one must be perfect match
  */
+/* Not too useful for now. Not mantaining.
 void anyChanceOfMatch(int *answers, char **ref, char **queries,int *nQueries, int *nGapMismatch){
 	int start,end,result,n,r,nSegments,tmpResult;
 	nSegments=nGapMismatch[0]+1;
@@ -269,24 +303,18 @@ void anyChanceOfMatch(int *answers, char **ref, char **queries,int *nQueries, in
 	}
 	destroyTree(tree);
 }
+*/
 
-void treeAlign(int *answer,char **ref,char **queries, int *nQueries,int *params){
-	int maxMismatch=params[1];
-	int maxDelete=params[2];
-	int maxInsert=params[3];
+void treeAlign(int *answer,char **ref,char **queries, int *nQueries,int *maxMismatch){
 	struct node *tree;
-	int match[4];
-	int *match;
 	printf("Building tree\n");
 	tree=buildTree(ref[0]);
 	printf("%d node tree ready\n",countNodes(tree));
-	printf("Scanning %d queries\n",nQueries[0]);
+	printf("Scanning %d queries (max mismatch %d)\n",nQueries[0],maxMismatch[0]);
 	for(int i=0;i<nQueries[0];i++){
 		//printf("Checking %d\n",i);
-		for(int j=0;j<4;j++)match[j]=0;
-		match=findStringInTree(tree,queries[i],tree,-1,maxMismatch,maxDelete,maxInsert,match);
+		answer[i]=findStringInTree(tree,queries[i],tree,-1,maxMismatch[0]);
 		//DO SOME CRAP WITH MATCH ARRAY
-		free(match);
 		//printf("Answer[%d] (of %d): %d\n",i,nQueries[0],answer[i]);
 	}
 	printf("Destroying tree\n");
