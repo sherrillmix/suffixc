@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <zlib.h>
 
 #define forR 0
 #if forR==1
@@ -15,6 +16,7 @@
 
 #define MIN(a,b) ((a)>(b)?(b):(a))
 #define MAX(a,b) ((a)>(b)?(a):(b))
+#define MAXLINELENGTH 100000
 
 struct node{
 	//int minPos,maxPos;
@@ -94,7 +96,7 @@ struct node* buildTree(char *s1) {
 	char thisChar;
 	unsigned int charId;
 	head=createNode(-1);
-	unsigned int n=strlen(s1);
+	size_t n=strlen(s1);
 	//head->hasChildren[1]=99;
 	//printf("%d",head->hasChildren[1]);
 
@@ -144,26 +146,6 @@ int destroyTree(struct node *tree){
 	return(0);
 }
 
-char* readFastq(char *fileName){
-		FILE *in = fopen(fileName,"rt");
-		char name[100000],seq[100000];
-		size_t length;
-		while(fgets(name,100000,in) != (char*)0){
-			length=strlen(name);
-			if(name[length-1]=='\n')name[length-1]='\0';
-			if(fgets(seq,100000,in)==(char*)0){
-				printf("Missing sequence");
-			}
-			length=strlen(seq);
-			if(seq[length-1]=='\n')seq[length-1]='\0';
-		}
-		fclose(in);
-
-}
-
-
-
-
 //make recursive with minPos and maxMisses (and currentNode)? then call on each substring (and mismatch)?
 //return -matches or 1 if we made it
 int findStringInTree(struct node *tree,char *query,struct node *currentNode, int pos, unsigned int maxMismatch){ // unsigned int maxGap, unsigned int maxMismatch, unsigned int maxInsert){
@@ -176,7 +158,7 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
 	int tmp;
 	//int *match=malloc(sizeof(int)*4); //matches, completed, mismatches, splices (should probably have insertions, deletions too)
 	//for(i=0;i<5;i++)match[i]=0;
-	unsigned int n=strlen(query);
+	size_t n=strlen(query);
 	//printf("Pointer size: %lu\n",sizeof(int*));
 	//store binary for nodes to check out if we need to check splicing (don't need to check if our min pos didn't change)
 	int *pathPos=malloc(sizeof(int)*(n+1));//if we start storing multiples, e.g. down multiple paths, then we'll need more
@@ -194,6 +176,7 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
 	path[0]=currentNode; 
 	bestMatch=1;//Really shouldn't default to success
 	for(i=0;i<n;i++){
+		if(query[i]=='\n')break;//Assuming new line means end of string
 		charId=convertCharToIndex(query[i]);
 		//printf("i:%d ",i);
 		//appropriate child is not null & we're not passed the position of that child
@@ -262,6 +245,172 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
 }
 
 
+//return null pointer if bad
+//assume single seqs/qual per line and no comments
+char** getSeqFromFastq(gzFile *in,char **buffers){
+	size_t length;
+	
+	if(gzgets(in,buffers[0],MAXLINELENGTH)==(char*)0)return((char**)0);
+	//peak ahead
+	//ungetc(tmpChar,in);
+	//name,seq,name again,qual
+	for(int i=1;i<4;i++){
+		if(gzgets(in,buffers[i],MAXLINELENGTH)==(char*)0){
+			errorMessage("Incomplete fastq record");
+			exit(-99);
+		}
+		//remove new lines
+		//length=strlen(buffers[i]);
+		//if(buffers[i][length-1]=='\n')buffers[i][length-1]='\0';
+	}
+}
+int writeSeqToFastq(gzFile *out, char **buffers){
+	size_t length;
+	for(int i=0;i<4;i++){
+		if(gzputs(out,buffers[i])==-1)return(0);
+	}
+	return(1);
+}
+
+int onlyACTG(char *read){
+	unsigned int counter=0;
+	while(read[counter]!='\0'&&read[counter]!='\n'){
+		if(convertCharToIndex(read[counter])>3){
+			//printf("Bad: %c -> %u\n",read[counter],convertCharToIndex(read[counter]));
+			return(0);
+		}
+		counter++;
+	}
+	return(1);
+}
+
+char *revString(char *str,char *str2){
+	size_t n=strlen(str);
+	//char *buffer=(char *)malloc(sizeof(char)*(n+1));
+	if(str[n-1]=='\n')n--;
+	str2[n]='\0';
+	for(int i=n-1;i>=0;i--){
+		str2[n-1-i]=str[i];
+	}
+	return(str2);
+}
+
+int strCat(char *str1,char *str2){
+	int counter=0;
+	while(str1[counter]!='\0'&&str1[counter]!='\n')counter++;//assuming new line is end of string
+	int firstPos=counter;
+	counter=0;
+	while(str2[counter]!='\0'){
+		str1[firstPos+counter]=str2[counter];
+		counter++;
+	}
+	str1[firstPos+counter]='\0';
+	return(1);
+}
+
+void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNames){
+	int maxMismatch=parameters[0];
+	int minPartial=parameters[1];
+	//big suffix tree for aligning
+	struct node *tree, *tree2;
+	//file pointer for fastqs
+	gzFile *in,*outMatch,*outPartial;
+	//line buffers
+	char* buffers[4];
+	char tmpStr[1000]; 
+	for(int i=0;i<4;i++)buffers[i]=(char *)malloc(sizeof(char)*MAXLINELENGTH);
+	char *rev=(char *)malloc(sizeof(char)*MAXLINELENGTH);
+
+	//char name[MAXLINELENGTH],seq[MAXLINELENGTH];
+	long int counter=0, matchCounter=0, partialCounter=0;
+	//answer from findStringInTree
+	int ans,ans2;
+
+	printf("Building tree\n");
+	tree=buildTree(ref[0]);
+	printf("Building reverse tree\n");
+	revString(ref[0],rev);
+	printf("%s",rev);
+	tree2=buildTree(rev);
+	printf("%d node tree ready\n",countNodes(tree));
+
+
+	printf("Opening file %s\n",fileName[0]);
+	//I think this should work with uncompressed files too
+	in=gzopen(fileName[0],"rt");
+	printf("Opening outFile %s\n",outNames[0]);
+	outMatch=gzopen(outNames[0],"w");
+	printf("Opening outFile %s\n",outNames[1]);
+	outPartial=gzopen(outNames[1],"w");
+
+	printf("Scanning file (max mismatch %d, min partial %d)\n",maxMismatch,minPartial);
+	while(getSeqFromFastq(in,buffers) != (char**)0){
+		counter++;
+		if(!onlyACTG(buffers[1])){
+			//write somewhere else?
+			//printf("Bad read %ld: %s\n",counter,buffers[1]);
+			continue;
+		}
+		ans=findStringInTree(tree,buffers[1],tree,-1,maxMismatch);
+		revString(buffers[1],rev);
+		ans2=findStringInTree(tree2,rev,tree2,-1,maxMismatch);
+		if(ans>0||ans2>0){ //also ans+ans2>X
+			writeSeqToFastq(outMatch,buffers);
+			matchCounter++;
+		}else if(ans < -minPartial||ans2 < -minPartial){
+			sprintf(tmpStr,":%d:%d\n",-ans,-ans2);
+			strCat(buffers[0],tmpStr);
+			writeSeqToFastq(outPartial,buffers);
+			partialCounter++;
+		}
+		//ignore bad matches for now
+	}
+	printf("All done. Found %ld matches, %ld partials from %ld reads",matchCounter,partialCounter,counter);
+	for(int i=0;i<4;i++)free(buffers[i]);
+	free(rev);
+	printf("Closing file %s\n",fileName[0]);
+	gzclose(in);
+	printf("Closing outFiles\n");
+	gzclose(outMatch);
+	gzclose(outPartial);
+	printf("Destroying tree\n");
+	destroyTree(tree);
+}
+
+
+char* readFastq(char *fileName){
+	FILE *in = fopen(fileName,"rt");
+	char name[MAXLINELENGTH],seq[MAXLINELENGTH];
+	size_t length;
+	while(fgets(name,MAXLINELENGTH,in) != (char*)0){
+		length=strlen(name);
+		if(name[length-1]=='\n')name[length-1]='\0';
+		if(fgets(seq,MAXLINELENGTH,in)==(char*)0){
+			printf("Missing sequence");
+		}
+		length=strlen(seq);
+		if(seq[length-1]=='\n')seq[length-1]='\0';
+	}
+	fclose(in);
+}
+
+
+void treeAlign(int *answer,char **ref,char **queries, int *nQueries,int *maxMismatch){
+	struct node *tree;
+	printf("Building tree\n");
+	tree=buildTree(ref[0]);
+	printf("%d node tree ready\n",countNodes(tree));
+	printf("Scanning %d queries (max mismatch %d)\n",nQueries[0],maxMismatch[0]);
+	for(int i=0;i<nQueries[0];i++){
+		//printf("Checking %d\n",i);
+		answer[i]=findStringInTree(tree,queries[i],tree,-1,maxMismatch[0]);
+		//printf("Answer[%d] (of %d): %d\n",i,nQueries[0],answer[i]);
+	}
+	printf("Destroying tree\n");
+	destroyTree(tree);
+}
+
+
 /* Not too useful for now don't feel like keeping up to date
 int checkPossibleMatch(struct node *tree,char* query, int nSegments){
 	int result, n, r,end;
@@ -305,21 +454,7 @@ void anyChanceOfMatch(int *answers, char **ref, char **queries,int *nQueries, in
 }
 */
 
-void treeAlign(int *answer,char **ref,char **queries, int *nQueries,int *maxMismatch){
-	struct node *tree;
-	printf("Building tree\n");
-	tree=buildTree(ref[0]);
-	printf("%d node tree ready\n",countNodes(tree));
-	printf("Scanning %d queries (max mismatch %d)\n",nQueries[0],maxMismatch[0]);
-	for(int i=0;i<nQueries[0];i++){
-		//printf("Checking %d\n",i);
-		answer[i]=findStringInTree(tree,queries[i],tree,-1,maxMismatch[0]);
-		//DO SOME CRAP WITH MATCH ARRAY
-		//printf("Answer[%d] (of %d): %d\n",i,nQueries[0],answer[i]);
-	}
-	printf("Destroying tree\n");
-	destroyTree(tree);
-}
+
 
 
 

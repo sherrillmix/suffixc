@@ -12,10 +12,13 @@ anyChanceOfMatch<-function(ref,queries,nGapMismatch=0){
 	.C('anyChanceOfMatch',as.integer(rep(-99,length(queries))),as.character(ref),as.character(queries),as.integer(length(queries)),as.integer(nGapMismatch))[[1]]
 }
 
-alignFastq<-function(ref,fastqName,outName){
-	.C('alignFastq',as.character(ref),as.character(fastqName),as.character(outName))
+alignFastq<-function(ref,fastqName,outPrefix,maxMismatch=1,minPartial=30){
+	suffixes<-c('.match.fastq.gz','.partial.fastq.gz')
+	outNames<-sprintf("%s%s",outPrefix,suffixes)
+	.C('findReadsInFastq',as.character(ref),as.character(fastqName),as.integer(c(maxMismatch,minPartial)),as.character(outNames))
 	return(TRUE)
 }
 
 #source("~/scripts/R/dna.R");ref<-read.fa('../../ref/HIV1U39362.fna');x<-read.fa('test.fa');x<-x[!grepl('[^ACTG]',x$seq),];source('tree.R');system.time(z<-tree(ref$seq,x$seq))
 #source("~/scripts/R/dna.R");ref<-read.fa('../../ref/HIV1U39362.fna');source('tree.R');system.time(tree(ref$seq,x$seq[100000]))
+#source("~/scripts/R/dna.R");ref<-read.fa('../../ref/HIV1U39362.fna');source('tree.R');system.time(alignFastq(ref$seq,'tmp.fastq.gz','tmp.out'))
