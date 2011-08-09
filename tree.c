@@ -310,7 +310,7 @@ char *revString(const char *str,char *str2){
 	return(str2);
 }
 
-int strCat(char *str1,char *str2){
+int strCat(char *str1, const char *str2){
 	int counter=0;
 	while(str1[counter]!='\0'&&str1[counter]!='\n')counter++;//assuming new line is end of string
 	int firstPos=counter;
@@ -345,8 +345,9 @@ void findPrimersInFastq(char **primers, char **fileName, char **outNames, int *n
 void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNames){
 	int i,j; //iterators
 	int index; //for filling in answers appropriately
-	int maxMismatch=parameters[0];
-	int minPartial=parameters[1];
+	int maxMismatch=parameters[0]; //at most x mismatch and splices
+	int minPartial=parameters[1]; //require x length to call partial match, if left and right partial then call a match 
+	int sumMatch=parameters[2]; //if left length + right length > x, call a match
 	struct node *tree[2]; //big suffix tree for aligning
 	gzFile *in,*outMatch,*outPartial; //file pointer for fastqs
 	//line buffers
@@ -356,25 +357,18 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
 	char* seqs[4];
 	for(i=0;i<4;i++)seqs[i]=(char *)malloc(sizeof(char)*MAXLINELENGTH);
 	
-	char tmpStr[1000]; 
-	for(i=0;i<4;i++)buffers[i]=(char *)malloc(sizeof(char)*MAXLINELENGTH);
+	char tmpStr[1000];//to append to things
 
 	long int counter=0, matchCounter=0, partialCounter=0;
 	//answer from findStringInTree
 	int ans[8];
-	int isMatch;
+	int isMatch,isPartial;
 
 	printf("Building tree\n");
 	tree[0]=buildTree(ref[0]);
-	//printf("Building complement tree\n");
-	//complementString(ref[0],comp);
-	//tree[1]=buildTree(comp);
 	printf("Building reverse tree\n");
 	revString(ref[0],seqs[0]);
 	tree[1]=buildTree(seqs[0]);
-	//printf("Building reverse compliment tree\n");
-	//revString(rev,comp);
-	//tree[3]=buildTree(comp);
 
 	printf("%d node trees ready\n",countNodes(tree[0]));
 
@@ -387,9 +381,10 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
 	printf("Opening outFile %s\n",outNames[1]);
 	outPartial=gzopen(outNames[1],"w");
 
-	printf("Scanning file (max mismatch %d, min partial %d)\n",maxMismatch,minPartial);
+	printf("Scanning file (max mismatch %d, min partial %d, sum match %d)\n",maxMismatch,minPartial,sumMatch);
 	while(getSeqFromFastq(in,buffers) != (char**)0){
 		counter++;
+		if(counter%10000==0)printf("Working on read %ld\n",counter);
 		if(!onlyACTG(buffers[1])){
 			//write somewhere else?
 			//printf("Bad read %ld: %s\n",counter,buffers[1]);
@@ -404,27 +399,28 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
 				if(i==0)index=j;
 				else index=4+(j/2*2)+1-(j%2); //using integer division to floor. and switching 4-5 and 6-7 to make later comparisons easy 0-4,1-5,...
 				ans[index]=findStringInTree(tree[i],seqs[j],tree[i],-1,maxMismatch);
-				printf("i: %d j: %d index: %d\n",i,j,index);
 			}
 		}
 		isMatch=0;
+		isPartial=0;
 		for(i=0;i<4;i++){
-			if(ans[i]>0||ans[i+4]>0)isMatch=1;
+			if(ans[i]>0||ans[i+4]>0||(ans[i]<-minPartial&&ans[i+4]<-minPartial)||(ans[i]+ans[i+4])<-sumMatch)isMatch=1; //found a match, or both side have partial, or sum of sides enough
+			if(ans[i]<-minPartial||ans[i+4]<-minPartial)isPartial=1;
+			sprintf(tmpStr,":%d|%d",-ans[i],-ans[i+4]);
+			strCat(buffers[0],tmpStr);
 		}
-		break;
+		strCat(buffers[0],"\n");
 
-		if(ans[0]>0||ans[1]>0){ //also ans+ans2>X
+		if(isMatch){ //also ans+ans2>X
 			writeSeqToFastq(outMatch,buffers);
 			matchCounter++;
-		}else if(ans[0] < -minPartial||ans[1] < -minPartial){
-			sprintf(tmpStr,":%d:%d\n",-ans[0],-ans[1]);
-			strCat(buffers[0],tmpStr);
+		}else if(isPartial){
 			writeSeqToFastq(outPartial,buffers);
 			partialCounter++;
 		}
 		//ignore bad matches for now
 	}
-	printf("All done. Found %ld matches, %ld partials from %ld reads",matchCounter,partialCounter,counter);
+	printf("All done. Found %ld matches, %ld partials from %ld reads\n",matchCounter,partialCounter,counter);
 	for(i=0;i<4;i++)free(buffers[i]);
 	for(i=0;i<4;i++)free(seqs[i]);
 	printf("Closing file %s\n",fileName[0]);
@@ -432,8 +428,9 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
 	printf("Closing outFiles\n");
 	gzclose(outMatch);
 	gzclose(outPartial);
-	printf("Destroying tree\n");
-	for(i=0;i<4;i++) destroyTree(tree[i]);
+	printf("Destroying trees\n");
+	for(i=0;i<2;i++) destroyTree(tree[i]);
+	return;
 }
 
 
