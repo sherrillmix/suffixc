@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <zlib.h>
+#include <pthread.h>
+
 
 #define forR 0
 #if forR==1
@@ -16,13 +18,80 @@
 
 #define MIN(a,b) ((a)>(b)?(b):(a))
 #define MAX(a,b) ((a)>(b)?(a):(b))
-#define MAXLINELENGTH 100000
+#define MAXLINELENGTH 10000
+#define QUEUESIZE 100
 
 struct node{
 	//int minPos,maxPos;
 	unsigned int nPos; //number of positions
 	int *pos; //array of positions sorted from least to greatest
 	struct node *children[4]; //pointer to 4 children
+};
+//return null pointer if bad
+//assume single seqs/qual per line and no comments
+char** getSeqFromFastq(gzFile *in,char **buffers){
+	size_t length;
+	
+	if(gzgets(in,buffers[0],MAXLINELENGTH)==(char*)0)return((char**)0);
+	//peak ahead
+	//ungetc(tmpChar,in);
+	//name,seq,name again,qual
+	for(int i=1;i<4;i++){
+		if(gzgets(in,buffers[i],MAXLINELENGTH)==(char*)0){
+			errorMessage("Incomplete fastq record");
+			exit(-99);
+		}
+		//remove new lines
+		//length=strlen(buffers[i]);
+		//if(buffers[i][length-1]=='\n')buffers[i][length-1]='\0';
+	}
+	return(buffers);
+}
+
+
+/*
+struct buffer{
+	char *line[4];
+};
+
+struct bufferQueue{
+	struct buffer **buffers;	
+	unsigned int start,end,n,maxN;
+};
+
+struct bufferQueue *createQueue(int n){
+	int i,j;
+	struct bufferQueue *queue=(struct bufferQueue *)malloc(sizeof(struct bufferQueue));
+	queue->buffers=(struct buffer **)malloc(sizeof(struct buffer *)*n);
+	for(i=0;i<QUEUESIZE;i++){
+		for(j=0;j<4;j++){
+			queue->buffers[i]->line[j]=(char *)malloc(sizeof(char)*MAXLINELENGTH);
+	}
+	queue->n=0;
+	queue->start=0;
+	queue->end=n-1;
+	queue->maxN=n;
+}
+
+int addToQueueFromGzFile(struct bufferQueue *queue, gzFile *in){
+	if(queue->n >= queue->maxN)return(0);
+	int nextId=(queue->end+1)%queue->maxN;
+	if(getSeqFromFastq(in,queue->buffers[nextId]) == (char**)0)return(-1);
+	queue->end=nextId;
+	queue->n++;
+}
+*/
+
+//arguments to pass into pthread_create
+struct fsitArgs{
+	struct node *tree;
+	char *query;
+	struct node *currentNode;
+	int pos;
+	unsigned int maxMismatch;
+	int *out;
+	int id;
+	char *buffer;
 };
 
 /*
@@ -161,6 +230,7 @@ int destroyTree(struct node *tree){
 	return(0);
 }
 
+
 //make recursive with minPos and maxMisses (and currentNode)? then call on each substring (and mismatch)?
 //return -matches or 1 if we made it
 int findStringInTree(struct node *tree,char *query,struct node *currentNode, int pos, unsigned int maxMismatch){ // unsigned int maxGap, unsigned int maxMismatch, unsigned int maxInsert){
@@ -260,25 +330,6 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
 }
 
 
-//return null pointer if bad
-//assume single seqs/qual per line and no comments
-char** getSeqFromFastq(gzFile *in,char **buffers){
-	size_t length;
-	
-	if(gzgets(in,buffers[0],MAXLINELENGTH)==(char*)0)return((char**)0);
-	//peak ahead
-	//ungetc(tmpChar,in);
-	//name,seq,name again,qual
-	for(int i=1;i<4;i++){
-		if(gzgets(in,buffers[i],MAXLINELENGTH)==(char*)0){
-			errorMessage("Incomplete fastq record");
-			exit(-99);
-		}
-		//remove new lines
-		//length=strlen(buffers[i]);
-		//if(buffers[i][length-1]=='\n')buffers[i][length-1]='\0';
-	}
-}
 int writeSeqToFastq(gzFile *out, char **buffers){
 	size_t length;
 	for(int i=0;i<4;i++){
@@ -337,12 +388,176 @@ void findPrimersInFastq(char **primers, char **fileName, char **outNames, int *n
 	while(getSeqFromFastq(in,buffers) != (char**)0){
 	}
 	free(outs);	
-	
-
 }*/
 
+int switchBuffers(char **buffer1, char **buffer2){
+	char *tmp; //for switching buffers
+	for(int i=0;i<4;i++){
+		tmp=buffer1[i];
+		buffer1[i]=buffer2[i];
+		buffer2[i]=tmp;
+	}
+	return(1);
+}
 
+/*
+void *eightWayFindStringInTreePar(void *fsitArgs){
+		struct fsitArgs *args=(struct fsitArgs *)fsitArgs;
+		struct buffer seqs;
+
+		strcpy(seqs[0],buffers[1]);
+		revString(seqs[0],seqs[1]);
+		complementString(seqs[0],seqs[2]);
+		revString(seqs[2],seqs[3]);
+		for(i=0;i<2;i++){
+			for(j=0;j<4;j++){
+				if(i==0)index=j;
+				else index=4+(j/2*2)+1-(j%2); //using integer division to floor. and switching 4-5 and 6-7 to make later comparisons easy 0-4,1-5,...
+				args[i*4+j]->tree=tree[i];
+				args[i*4+j]->query=seqs[j];
+				args[i*4+j]->currentNode=tree[i];
+				args[i*4+j]->pos=-1;
+				args[i*4+j]->maxMismatch=maxMismatch;
+				args[i*4+j]->out=&ans[index];
+				args[i*4+j]->id=i*4+j;
+				if(pthread_create(&threads[i*4+j],NULL,findStringInTreePar,args[i*4+j])){errorMessage("Couldn't create thread");exit(-98);}
+				//ans[index]=findStringInTree(tree[i],seqs[j],tree[i],-1,maxMismatch);
+			}
+		}
+	struct fsitArgs *args=(struct fsitArgs *)fsitArgs;
+	//printf("HERE %d ",args->id);
+	*args->out=findStringInTree(args->tree,args->query,args->currentNode,args->pos,args->maxMismatch);
+	//printf("HERE2 %d ",args->id);
+}
+*/
+void *findStringInTreePar(void *fsitArgs){
+	struct fsitArgs *args=(struct fsitArgs *)fsitArgs;
+	//printf("HERE %d ",args->id);
+	*args->out=findStringInTree(args->tree,args->query,args->currentNode,args->pos,args->maxMismatch);
+	//printf("HERE2 %d ",args->id);
+}
 void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNames){
+	int i,j; //iterators
+	int index; //for filling in answers appropriately
+	int maxMismatch=parameters[0]; //at most x mismatch and splices
+	int minPartial=parameters[1]; //require x length to call partial match, if left and right partial then call a match 
+	int sumMatch=parameters[2]; //if left length + right length > x, call a match
+	struct node *tree[2]; //big suffix tree for aligning
+	gzFile *in,*outMatch,*outPartial; //file pointer for fastqs
+	//line buffers
+	char* buffers[4];
+	for(i=0;i<4;i++)buffers[i]=(char *)malloc(sizeof(char)*MAXLINELENGTH);
+	char* buffers2[4];
+	for(i=0;i<4;i++)buffers2[i]=(char *)malloc(sizeof(char)*MAXLINELENGTH);
+	//seq conversions
+	char* seqs[4];
+	for(i=0;i<4;i++)seqs[i]=(char *)malloc(sizeof(char)*MAXLINELENGTH);
+	
+	char tmpStr[1000];//to append to things
+
+	long int counter=0, matchCounter=0, partialCounter=0;
+	struct fsitArgs *args[8];
+	for(i=0;i<8;i++)args[i]=(struct fsitArgs *)malloc(sizeof(struct fsitArgs));
+	int ans[8];//answer from findStringInTree
+	int isMatch,isPartial;
+	char **fastqCheck;//keep track of whether our fastq is empty
+
+	//threads
+	pthread_t threads[8];
+
+	printf("Building tree\n");
+	tree[0]=buildTree(ref[0]);
+	printf("Building reverse tree\n");
+	revString(ref[0],seqs[0]);
+	tree[1]=buildTree(seqs[0]);
+
+	printf("%d node trees ready\n",countNodes(tree[0]));
+
+
+	printf("Opening file %s\n",fileName[0]);
+	//I think this should work with uncompressed files too
+	in=gzopen(fileName[0],"rt");
+	printf("Opening outFile %s\n",outNames[0]);
+	outMatch=gzopen(outNames[0],"w");
+	printf("Opening outFile %s\n",outNames[1]);
+	outPartial=gzopen(outNames[1],"w");
+
+	printf("Scanning file (max mismatch %d, min partial %d, sum match %d)\n",maxMismatch,minPartial,sumMatch);
+	fastqCheck=getSeqFromFastq(in,buffers);
+	while(fastqCheck != (char**)0){
+		counter++;
+		if(counter%10000==0)printf("Working on read %ld\n",counter);
+		if(!onlyACTG(buffers[1])){
+			//write somewhere else?
+			//printf("Bad read %ld: %s\n",counter,buffers[1]);
+			fastqCheck=getSeqFromFastq(in,buffers);
+			continue;
+		}
+		strcpy(seqs[0],buffers[1]);
+		revString(seqs[0],seqs[1]);
+		complementString(seqs[0],seqs[2]);
+		revString(seqs[2],seqs[3]);
+		for(i=0;i<2;i++){
+			for(j=0;j<4;j++){
+				if(i==0)index=j;
+				else index=4+(j/2*2)+1-(j%2); //using integer division to floor. and switching 4-5 and 6-7 to make later comparisons easy 0-4,1-5,...
+				args[i*4+j]->tree=tree[i];
+				args[i*4+j]->query=seqs[j];
+				args[i*4+j]->currentNode=tree[i];
+				args[i*4+j]->pos=-1;
+				args[i*4+j]->maxMismatch=maxMismatch;
+				args[i*4+j]->out=&ans[index];
+				args[i*4+j]->id=i*4+j;
+				if(pthread_create(&threads[i*4+j],NULL,findStringInTreePar,args[i*4+j])){errorMessage("Couldn't create thread");exit(-98);}
+				//ans[index]=findStringInTree(tree[i],seqs[j],tree[i],-1,maxMismatch);
+			}
+		}
+
+		//read from disk while we're waiting
+		fastqCheck=getSeqFromFastq(in,buffers2);
+		//printf("%p",fastqCheck);
+		//stop waiting here? and throw it all into some sort of giant queue?
+		for(i=0;i<2;i++){
+			for(j=0;j<4;j++){
+				if(pthread_join(threads[i*4+j],NULL)){errorMessage("Couldn't join thread");exit(-97);}
+			}
+		}
+		isMatch=0;
+		isPartial=0;
+		for(i=0;i<4;i++){
+			if(ans[i]>0||ans[i+4]>0||(ans[i]<-minPartial&&ans[i+4]<-minPartial)||(ans[i]+ans[i+4])<-sumMatch)isMatch=1; //found a match, or both side have partial, or sum of sides enough
+			if(ans[i]<-minPartial||ans[i+4]<-minPartial)isPartial=1;
+			sprintf(tmpStr,":%d|%d",-ans[i],-ans[i+4]);
+			strCat(buffers[0],tmpStr);
+		}
+		strCat(buffers[0],"\n");
+
+		if(isMatch){ //also ans+ans2>X
+			writeSeqToFastq(outMatch,buffers);
+			matchCounter++;
+		}else if(isPartial){
+			writeSeqToFastq(outPartial,buffers);
+			partialCounter++;
+		}
+		switchBuffers(buffers,buffers2);
+		//ignore bad matches for now
+	}
+	printf("All done. Found %ld matches, %ld partials from %ld reads\n",matchCounter,partialCounter,counter);
+	for(i=0;i<4;i++)free(buffers[i]);
+	for(i=0;i<4;i++)free(buffers2[i]);
+	for(i=0;i<4;i++)free(seqs[i]);
+	for(i=0;i<8;i++)free(args[i]);
+	printf("Closing file %s\n",fileName[0]);
+	gzclose(in);
+	printf("Closing outFiles\n");
+	gzclose(outMatch);
+	gzclose(outPartial);
+	printf("Destroying trees\n");
+	for(i=0;i<2;i++) destroyTree(tree[i]);
+	return;
+}
+
+void findReadsInFastqNoPar(char** ref, char **fileName, int *parameters,char **outNames){
 	int i,j; //iterators
 	int index; //for filling in answers appropriately
 	int maxMismatch=parameters[0]; //at most x mismatch and splices
@@ -384,7 +599,7 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
 	printf("Scanning file (max mismatch %d, min partial %d, sum match %d)\n",maxMismatch,minPartial,sumMatch);
 	while(getSeqFromFastq(in,buffers) != (char**)0){
 		counter++;
-		if(counter%10000==0)printf("Working on read %ld\n",counter);
+		if(counter%1000000==0)printf("Working on read %ld\n",counter);
 		if(!onlyACTG(buffers[1])){
 			//write somewhere else?
 			//printf("Bad read %ld: %s\n",counter,buffers[1]);
@@ -432,7 +647,6 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
 	for(i=0;i<2;i++) destroyTree(tree[i]);
 	return;
 }
-
 
 char* readFastq(char *fileName){
 	FILE *in = fopen(fileName,"rt");
