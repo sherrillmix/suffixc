@@ -500,7 +500,7 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
 		for(i=0;i<2;i++){
 			for(j=0;j<4;j++){
 				if(i==0)index=j;
-				else index=4+(j/2*2)+1-(j%2); //using integer division to floor. and switching 4-5 and 6-7 to make later comparisons easy 0-4,1-5,...
+				else index=4+(j/2*2)+1-(j%2); //using integer division to floor. and switching 4-5 and 6-7 to make later comparisons easy 0&4,1&5,...
 				args[i*4+j]->tree=tree[i];
 				args[i*4+j]->query=seqs[j];
 				args[i*4+j]->currentNode=tree[i];
