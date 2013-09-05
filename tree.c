@@ -1,4 +1,4 @@
-//R CMD SHLIB tree.c
+//R CMD SHLIB -lz tree.c
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,7 +18,7 @@
 
 #define MIN(a,b) ((a)>(b)?(b):(a))
 #define MAX(a,b) ((a)>(b)?(a):(b))
-#define MAXLINELENGTH 10000
+#define MAXLINELENGTH 100000
 #define QUEUESIZE 100
 
 struct node{
@@ -214,6 +214,7 @@ struct node* buildTree(char *s1) {
 
 unsigned int countNodes(struct node *tree){
 	unsigned int count=0;
+	if(tree==(struct node*)0)return(count);//catch empty tree
 	for(unsigned int i=0;i<4;i++){
 		if(tree->children[i]!=(struct node*)0)count+=countNodes(tree->children[i]);
 	}
