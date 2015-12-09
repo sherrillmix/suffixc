@@ -558,97 +558,6 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
 	return;
 }
 
-void findReadsInFastqNoPar(char** ref, char **fileName, int *parameters,char **outNames){
-	int i,j; //iterators
-	int index; //for filling in answers appropriately
-	int maxMismatch=parameters[0]; //at most x mismatch and splices
-	int minPartial=parameters[1]; //require x length to call partial match, if left and right partial then call a match 
-	int sumMatch=parameters[2]; //if left length + right length > x, call a match
-	struct node *tree[2]; //big suffix tree for aligning
-	gzFile *in,*outMatch,*outPartial; //file pointer for fastqs
-	//line buffers
-	char* buffers[4];
-	for(i=0;i<4;i++)buffers[i]=(char *)malloc(sizeof(char)*MAXLINELENGTH);
-	//seq conversions
-	char* seqs[4];
-	for(i=0;i<4;i++)seqs[i]=(char *)malloc(sizeof(char)*MAXLINELENGTH);
-	
-	char tmpStr[1000];//to append to things
-
-	long int counter=0, matchCounter=0, partialCounter=0;
-	//answer from findStringInTree
-	int ans[8];
-	int isMatch,isPartial;
-
-	printf("Building tree\n");
-	tree[0]=buildTree(ref[0]);
-	printf("Building reverse tree\n");
-	revString(ref[0],seqs[0]);
-	tree[1]=buildTree(seqs[0]);
-
-	printf("%d node trees ready\n",countNodes(tree[0]));
-
-
-	printf("Opening file %s\n",fileName[0]);
-	//I think this should work with uncompressed files too
-	in=gzopen(fileName[0],"rt");
-	printf("Opening outFile %s\n",outNames[0]);
-	outMatch=gzopen(outNames[0],"w");
-	printf("Opening outFile %s\n",outNames[1]);
-	outPartial=gzopen(outNames[1],"w");
-
-	printf("Scanning file (max mismatch %d, min partial %d, sum match %d)\n",maxMismatch,minPartial,sumMatch);
-	while(getSeqFromFastq(in,buffers) != (char**)0){
-		counter++;
-		if(counter%1000000==0)printf("Working on read %ld\n",counter);
-		if(!onlyACTG(buffers[1])){
-			//write somewhere else?
-			//printf("Bad read %ld: %s\n",counter,buffers[1]);
-			continue;
-		}
-		strcpy(seqs[0],buffers[1]);
-		revString(seqs[0],seqs[1]);
-		complementString(seqs[0],seqs[2]);
-		revString(seqs[2],seqs[3]);
-		for(i=0;i<2;i++){
-			for(j=0;j<4;j++){
-				if(i==0)index=j;
-				else index=4+(j/2*2)+1-(j%2); //using integer division to floor. and switching 4-5 and 6-7 to make later comparisons easy 0-4,1-5,...
-				ans[index]=findStringInTree(tree[i],seqs[j],tree[i],-1,maxMismatch);
-			}
-		}
-		isMatch=0;
-		isPartial=0;
-		for(i=0;i<4;i++){
-			if(ans[i]>0||ans[i+4]>0||(ans[i]<-minPartial&&ans[i+4]<-minPartial)||(ans[i]+ans[i+4])<-sumMatch)isMatch=1; //found a match, or both side have partial, or sum of sides enough
-			if(ans[i]<-minPartial||ans[i+4]<-minPartial)isPartial=1;
-			sprintf(tmpStr,":%d|%d",-ans[i],-ans[i+4]);
-			strCat(buffers[0],tmpStr);
-		}
-		strCat(buffers[0],"\n");
-
-		if(isMatch){ //also ans+ans2>X
-			writeSeqToFastq(outMatch,buffers);
-			matchCounter++;
-		}else if(isPartial){
-			writeSeqToFastq(outPartial,buffers);
-			partialCounter++;
-		}
-		//ignore bad matches for now
-	}
-	printf("All done. Found %ld matches, %ld partials from %ld reads\n",matchCounter,partialCounter,counter);
-	for(i=0;i<4;i++)free(buffers[i]);
-	for(i=0;i<4;i++)free(seqs[i]);
-	printf("Closing file %s\n",fileName[0]);
-	gzclose(in);
-	printf("Closing outFiles\n");
-	gzclose(outMatch);
-	gzclose(outPartial);
-	printf("Destroying trees\n");
-	for(i=0;i<2;i++) destroyTree(tree[i]);
-	return;
-}
-
 char* readFastq(char *fileName){
 	FILE *in = fopen(fileName,"rt");
 	char name[MAXLINELENGTH],seq[MAXLINELENGTH];
@@ -666,23 +575,35 @@ char* readFastq(char *fileName){
 }
 
 
-void treeAlign(int *answer,char **ref,char **queries, int *nQueries,int *maxMismatch){
-	struct node *tree;
-	printf("Building tree\n");
-	tree=buildTree(ref[0]);
-	printf("%d node tree ready\n",countNodes(tree));
-	printf("Scanning %d queries (max mismatch %d)\n",nQueries[0],maxMismatch[0]);
-	for(int i=0;i<nQueries[0];i++){
-		//printf("Checking %d\n",i);
-		answer[i]=findStringInTree(tree,queries[i],tree,-1,maxMismatch[0]);
-		//printf("Answer[%d] (of %d): %d\n",i,nQueries[0],answer[i]);
-	}
-	printf("Destroying tree\n");
-	destroyTree(tree);
+
+int main (int argc, char *argv[]){
+    if ( argc != 2 ) /* argc should be 2 for correct execution */
+    {
+        /* We print argv[0] assuming it is the program name */
+        printf( "usage: %s ref.fasta reads.fastq nThreads", argv[0] );
+    }
+    else 
+    {
+        // We assume argv[1] is a filename to open
+        FILE *file = fopen( argv[1], "r" );
+
+        /* fopen returns 0, the NULL pointer, on failure */
+        if ( file == 0 )
+        {
+            printf( "Could not open file\n" );
+        }
+        else 
+        {
+            int x;
+            /* read one character at a time from file, stopping at EOF, which
+               indicates the end of the file.  Note that the idiom of "assign
+               to a variable, check the value" used below works because
+               the assignment statement evaluates to the value assigned. */
+            while  ( ( x = fgetc( file ) ) != EOF )
+            {
+                printf( "%c", x );
+            }
+            fclose( file );
+        }
+    }
 }
-
-
-
-
-
-
