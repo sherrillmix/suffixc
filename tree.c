@@ -682,49 +682,6 @@ void treeAlign(int *answer,char **ref,char **queries, int *nQueries,int *maxMism
 }
 
 
-/* Not too useful for now don't feel like keeping up to date
-int checkPossibleMatch(struct node *tree,char* query, int nSegments){
-	int result, n, r,end;
-	char tmp;
-	n=strlen(query);
-	r=n/nSegments;
-	//printf("n: %d r: %d",n,r);
-	if(n<nSegments)return(1);
-	for(unsigned int j=0;j<nSegments;j++){
-		if(j==nSegments-1)end=n;
-		else end=(j+1)*r-1;
-		tmp=query[end+1];
-		query[end+1]='\0';
-		result=findStringInTree(tree,&query[j*r]);
-		//printf("i: %d j: %d start: %d end: %d string: %s result:%d\n",i,j,j*r,end,&queries[i][j*r],result);
-		query[end+1]=tmp;
-		if(result==0)return(1);
-	}
-	return(0);
-}
-*/
-
-/*
- * k mismatches, l gaps means that divide n-base query into n/(k+l+1) at least one must be perfect match
- */
-/* Not too useful for now. Not mantaining.
-void anyChanceOfMatch(int *answers, char **ref, char **queries,int *nQueries, int *nGapMismatch){
-	int start,end,result,n,r,nSegments,tmpResult;
-	nSegments=nGapMismatch[0]+1;
-	char tmp;
-
-	struct node *tree;
-	printf("Building tree\n");
-	tree=buildTree(ref[0]);
-	printf("%d node tree ready\n",countNodes(tree));
-	printf("Scanning %d queries\n",nQueries[0]);
-	for(int i=0;i<nQueries[0];i++){
-		answers[i]=checkPossibleMatch(tree,queries[i],nSegments);
-	}
-	destroyTree(tree);
-}
-*/
-
 
 
 

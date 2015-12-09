@@ -7,11 +7,6 @@ tree<-function(ref,queries,maxMismatch=1){
 	.C('treeAlign',as.integer(rep(99,length(queries))),as.character(ref),as.character(queries),as.integer(length(queries)),as.integer(maxMismatch))[[1]]
 }
 
-anyChanceOfMatch<-function(ref,queries,nGapMismatch=0){
-	if(any(grepl('[^ACTG]',c(ref,queries))))stop(simpleError('Only ACTG please'))
-	.C('anyChanceOfMatch',as.integer(rep(-99,length(queries))),as.character(ref),as.character(queries),as.integer(length(queries)),as.integer(nGapMismatch))[[1]]
-}
-
 alignFastq<-function(ref,fastqName,outPrefix,maxMismatch=1,minPartial=30,partialSumMatch=90){
 	suffixes<-c('.match.fastq.gz','.partial.fastq.gz')
 	outNames<-sprintf("%s%s",outPrefix,suffixes)
