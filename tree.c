@@ -1,37 +1,8 @@
-//R CMD SHLIB -lz tree.c
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include "zlib.h"
-#include <pthread.h>
+#include "tree.h"
 
-
-#define forR 0
-#if forR==1
-	#include <R.h>
-	#define errorMessage(A) error(A)
-	#define warningMessage(A) warning(A)
-#else
-	#define errorMessage(A) printf(A)
-	#define warningMessage(A) printf(A)
-#endif
-
-#define MIN(a,b) ((a)>(b)?(b):(a))
-#define MAX(a,b) ((a)>(b)?(a):(b))
-#define MAXLINELENGTH 100000
-#define QUEUESIZE 100
-#define MAXSTRINGIN 1000
-
-struct node{
-  //int minPos,maxPos;
-  unsigned int nPos; //number of positions
-  int *pos; //array of positions sorted from least to greatest
-  struct node *children[4]; //pointer to 4 children
-};
 //return null pointer if bad
 //assume single seqs/qual per line and no comments
 char** getSeqFromFastq(gzFile *in,char **buffers){
-  size_t length;
   int ii;
 
   if(gzgets(*in,buffers[0],MAXLINELENGTH)==(char*)0)return((char**)0);
@@ -43,34 +14,9 @@ char** getSeqFromFastq(gzFile *in,char **buffers){
       errorMessage("Incomplete fastq record");
       exit(-99);
     }
-    //remove new lines
-    //length=strlen(buffers[ii]);
-    //if(buffers[ii][length-1]=='\n')buffers[ii][length-1]='\0';
   }
   return(buffers);
 }
-
-
-//arguments to pass into pthread_create
-struct fsitArgs{
-  struct node *tree;
-  char *query;
-  struct node *currentNode;
-  int pos;
-  unsigned int maxMismatch;
-  int *out;
-  int id;
-  char *buffer;
-};
-
-/*
- * Don't need this now that we're using smarter sort
- int compareInt(const void *x,const void *y){
- int *ix=(int*)x;
- int *iy=(int*)y;
- return(*ix-*iy);   //*ix>*iy?1:*ix<*iy?-1:0
- }
- */
 
 int findMinPos(struct node *node, int pos){
   unsigned int ii;
@@ -147,6 +93,7 @@ int complementString(char *read,char *out){
   out[counter]='\0';
   return(1);
 }
+
 struct node* buildTree(char *s1) {
   struct node *head, *currentNode;
   char thisChar;
@@ -210,15 +157,12 @@ int destroyTree(struct node *tree){
 //make recursive with minPos and maxMisses (and currentNode)? then call on each substring (and mismatch)?
 //return -matches or 1 if we made it
 int findStringInTree(struct node *tree,char *query,struct node *currentNode, int pos, unsigned int maxMismatch){ // unsigned int maxGap, unsigned int maxMismatch, unsigned int maxInsert){
-  int match;
   //iterators
   unsigned int ii,k;
   int jj;
 
   unsigned int depth,charId;
   int tmp;
-  //int *match=malloc(sizeof(int)*4); //matches, completed, mismatches, splices (should probably have insertions, deletions too)
-  //for(ii=0;ii<5;ii++)match[ii]=0;
   size_t n=strlen(query);
   //printf("Pointer size: %lu\n",sizeof(int*));
   //store binary for nodes to check out if we need to check splicing (don't need to check if our min pos didn't change)
@@ -226,7 +170,6 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
   //unsigned int nJumpBack=0;
   //store pointers to nodes to check mismatch
   struct node **path=malloc(sizeof(struct node*)*(n+1));//if we start storing multiples, e.g. down multiple paths, then we'll need more
-  unsigned int nPath=0;
   depth=0;
   int bestMatch;
   char base, tmpChar;
@@ -259,7 +202,7 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
         for(jj=depth;jj>=0;jj--){
           //printf("jj:%d ",jj);
           //splicing
-          if(pathPos[jj]-pathPos[jj-1]>1&&jj>0||jj==depth){
+          if((pathPos[jj]-pathPos[jj-1]>1&&jj>0)||jj==depth){
             //jump to root and try to match the rest, respecting the position of this match
             tmp=findStringInTree(tree,&query[jj],tree,pathPos[jj],maxMismatch-1);
             //printf("Splice %d %s<----\n",tmp,&query[jj]);
@@ -302,7 +245,6 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
 
 
 int writeSeqToFastq(gzFile *out, char **buffers){
-  size_t length;
   int ii;
   for(ii=0;ii<4;ii++){
     if(gzputs(*out,buffers[ii])==-1)return(0);
@@ -361,10 +303,10 @@ int switchBuffers(char **buffer1, char **buffer2){
 
 void *findStringInTreePar(void *fsitArgs){
   struct fsitArgs *args=(struct fsitArgs *)fsitArgs;
-  //printf("HERE %d ",args->id);
   *args->out=findStringInTree(args->tree,args->query,args->currentNode,args->pos,args->maxMismatch);
-  //printf("HERE2 %d ",args->id);
+  return(fsitArgs);
 }
+
 void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNames){
   int ii,jj; //iterators
   int index; //for filling in answers appropriately
@@ -486,77 +428,3 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
   return;
 }
 
-char* readFastq(char *fileName){
-  FILE *in = fopen(fileName,"rt");
-  char name[MAXLINELENGTH],seq[MAXLINELENGTH];
-  size_t length;
-  while(fgets(name,MAXLINELENGTH,in) != (char*)0){
-    length=strlen(name);
-    if(name[length-1]=='\n')name[length-1]='\0';
-    if(fgets(seq,MAXLINELENGTH,in)==(char*)0){
-      printf("Missing sequence");
-    }
-    length=strlen(seq);
-    if(seq[length-1]=='\n')seq[length-1]='\0';
-  }
-  fclose(in);
-}
-
-
-
-int main (int argc, char *argv[]){
-  int nMismatch=0,nThread=2;
-  int c;
-  int ii;
-  char usage[500];
-  char refFile[MAXSTRINGIN+1];
-  char fastqFile[MAXSTRINGIN+1];
-  sprintf(usage,"Usage: %s ref.fa reads.fastq [-m 2] [-t 4]\n  first argument: a reference sequence in a fasta file (if this is much more than 10kb then we could get memory problems)\n  second argument: a fastq file containing the reads to search\n  -t: (optional) specify how many threads to use (default: 2)\n  -m: (optional) specify how many mismatches to tolerate (default: 00)\n  -h: (optional) display this message and exit\n",argv[0]);
-  while ((c = getopt (argc, argv, "hm:t:")) != -1){
-    switch (c){
-      case 'm':
-        nMismatch = atoi(optarg);
-        break;
-      case 'y':
-        nThread = atoi(optarg);
-        break;
-      case 'h':
-        fprintf(stderr,"%s",usage);
-        return(3);
-      case '?':
-        if (optopt == 'c')
-          fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-        else if (isprint (optopt))
-          fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-        else
-          fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
-        return 1;
-    }
-  }
-
-
-  if(optind!=argc-2){
-    fprintf(stderr,"%s",usage);
-    return(2);
-  }
-
-  for (ii = 0; ii < argc-optind; ii++){
-    if(strlen(argv[optind+ii])>MAXSTRINGIN){
-      fprintf(stderr,"Filenames must be less than %d characters long",MAXSTRINGIN);
-      return(4);
-    }
-    switch(ii){
-      case 0:
-        strcpy(refFile,argv[optind+ii]);
-        break;
-      case 1:
-        strcpy(fastqFile,argv[optind+ii]);
-        break;
-    }
-  }
-  fprintf (stderr,"nMismatch: %d\nnThread: %d\nrefFile: %s\nfastqFile: %s\n", nMismatch, nThread,refFile,fastqFile);
-
-  //void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNames){
-
-  return 0;
-}
