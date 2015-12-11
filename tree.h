@@ -50,7 +50,7 @@ int destroyTree(struct node *tree);
 int findStringInTree(struct node *tree,char *query,struct node *currentNode, int pos, unsigned int maxMismatch);
 int writeSeqToFastq(gzFile *out, char **buffers);
 int onlyACTG(char *read);
-char *revString(const char *str,char *str2);
+int revString(const char *str,char *str2);
 int strCat(char *str1, const char *str2);
 int switchBuffers(char **buffer1, char **buffer2);
 void *findStringInTreePar(void *fsitArgs);

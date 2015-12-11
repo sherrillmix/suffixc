@@ -11,7 +11,10 @@ int tests_run;
 int foo=7;
 int bar=7;
 
-static char * test_characterConversion(){
+char string1[1000];
+char string2[1000];
+
+static char * test_simpleCharFuncs(){
   mu_assert("Error. covertCharToIndex roundtrip not correct",convertIndexToChar(convertCharToIndex('A'))=='A');
   mu_assert("Error. covertCharToIndex roundtrip not correct",convertIndexToChar(convertCharToIndex('C'))=='C');
   mu_assert("Error. covertCharToIndex roundtrip not correct",convertIndexToChar(convertCharToIndex('G'))=='G');
@@ -24,6 +27,12 @@ static char * test_characterConversion(){
   mu_assert("Error. complementBase roundtrip not correct",complementBase(complementBase('C'))=='C');
   mu_assert("Error. complementBase roundtrip not correct",complementBase(complementBase('G'))=='G');
   mu_assert("Error. complementBase roundtrip not correct",complementBase(complementBase('T'))=='T');
+  revString("",string2);
+  mu_assert("Error. reverseString not correct",strcmp("",string2)==0);
+  revString("Z",string2);
+  mu_assert("Error. reverseString not correct",strcmp("Z",string2)==0);
+  revString("1234567890ABCabc--",string2);
+  mu_assert("Error. reverseString not correct",strcmp("--cbaCBA0987654321",string2)==0);
   return(0);
 }
 
@@ -33,7 +42,7 @@ static char * test_bar(){
 }
 
 static char * all_tests() {
-  mu_run_test(test_characterConversion);
+  mu_run_test(test_simpleCharFuncs);
   mu_run_test(test_bar);
   return 0;
 }

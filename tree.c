@@ -264,7 +264,7 @@ int onlyACTG(char *read){
   return(1);
 }
 
-char *revString(const char *str,char *str2){
+int revString(const char *str,char *str2){
   size_t n=strlen(str);
   int ii;
   //char *buffer=(char *)malloc(sizeof(char)*(n+1));
@@ -273,7 +273,7 @@ char *revString(const char *str,char *str2){
   for(ii=n-1;ii>=0;ii--){
     str2[n-1-ii]=str[ii];
   }
-  return(str2);
+  return(0);
 }
 
 int strCat(char *str1, const char *str2){
@@ -286,7 +286,7 @@ int strCat(char *str1, const char *str2){
     counter++;
   }
   str1[firstPos+counter]='\0';
-  return(1);
+  return(0);
 }
 
 int switchBuffers(char **buffer1, char **buffer2){
@@ -297,7 +297,7 @@ int switchBuffers(char **buffer1, char **buffer2){
     buffer1[ii]=buffer2[ii];
     buffer2[ii]=tmp;
   }
-  return(1);
+  return(0);
 }
 
 
