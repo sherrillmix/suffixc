@@ -14,7 +14,7 @@ int main (int argc, char *argv[]){
       case 'm':
         nMismatch = atoi(optarg);
         break;
-      case 'y':
+      case 't':
         nThread = atoi(optarg);
         break;
       case 'h':

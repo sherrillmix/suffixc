@@ -11,8 +11,19 @@ int tests_run;
 int foo=7;
 int bar=7;
 
-static char * test_foo(){
-  mu_assert("Error. A != 0",convertIndexToChar(0)=='A');
+static char * test_characterConversion(){
+  mu_assert("Error. covertCharToIndex roundtrip not correct",convertIndexToChar(convertCharToIndex('A'))=='A');
+  mu_assert("Error. covertCharToIndex roundtrip not correct",convertIndexToChar(convertCharToIndex('C'))=='C');
+  mu_assert("Error. covertCharToIndex roundtrip not correct",convertIndexToChar(convertCharToIndex('G'))=='G');
+  mu_assert("Error. covertCharToIndex roundtrip not correct",convertIndexToChar(convertCharToIndex('T'))=='T');
+  mu_assert("Error. complementBase not correct",complementBase('A')=='T');
+  mu_assert("Error. complementBase not correct",complementBase('C')=='G');
+  mu_assert("Error. complementBase not correct",complementBase('G')=='C');
+  mu_assert("Error. complementBase not correct",complementBase('T')=='A');
+  mu_assert("Error. complementBase roundtrip not correct",complementBase(complementBase('A'))=='A');
+  mu_assert("Error. complementBase roundtrip not correct",complementBase(complementBase('C'))=='C');
+  mu_assert("Error. complementBase roundtrip not correct",complementBase(complementBase('G'))=='G');
+  mu_assert("Error. complementBase roundtrip not correct",complementBase(complementBase('T'))=='T');
   return(0);
 }
 
@@ -22,7 +33,7 @@ static char * test_bar(){
 }
 
 static char * all_tests() {
-  mu_run_test(test_foo);
+  mu_run_test(test_characterConversion);
   mu_run_test(test_bar);
   return 0;
 }
