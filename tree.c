@@ -273,7 +273,7 @@ int revString(const char *str,char *str2){
   for(ii=n-1;ii>=0;ii--){
     str2[n-1-ii]=str[ii];
   }
-  return(0);
+  return(str2);
 }
 
 int strCat(char *str1, const char *str2){

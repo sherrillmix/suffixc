@@ -8,13 +8,8 @@
 int tests_run;
 
 
-int foo=7;
-int bar=7;
-
-char string1[1000];
-char string2[1000];
-
 static char * test_simpleCharFuncs(){
+  char string1[1000];
   mu_assert("Error. covertCharToIndex roundtrip not correct",convertIndexToChar(convertCharToIndex('A'))=='A');
   mu_assert("Error. covertCharToIndex roundtrip not correct",convertIndexToChar(convertCharToIndex('C'))=='C');
   mu_assert("Error. covertCharToIndex roundtrip not correct",convertIndexToChar(convertCharToIndex('G'))=='G');
@@ -27,23 +22,50 @@ static char * test_simpleCharFuncs(){
   mu_assert("Error. complementBase roundtrip not correct",complementBase(complementBase('C'))=='C');
   mu_assert("Error. complementBase roundtrip not correct",complementBase(complementBase('G'))=='G');
   mu_assert("Error. complementBase roundtrip not correct",complementBase(complementBase('T'))=='T');
-  revString("",string2);
-  mu_assert("Error. reverseString not correct",strcmp("",string2)==0);
-  revString("Z",string2);
-  mu_assert("Error. reverseString not correct",strcmp("Z",string2)==0);
-  revString("1234567890ABCabc--",string2);
-  mu_assert("Error. reverseString not correct",strcmp("--cbaCBA0987654321",string2)==0);
+  revString("",string1);
+  mu_assert("Error. reverseString not correct",strcmp("",string1)==0);
+  revString("Z",string1);
+  mu_assert("Error. reverseString not correct",strcmp("Z",string1)==0);
+  revString("1234567890ABCabc--",string1);
+  mu_assert("Error. reverseString not correct",strcmp("--cbaCBA0987654321",string1)==0);
+  mu_assert("Error. onlyACTG not correct",onlyACTG("A"));
+  mu_assert("Error. onlyACTG not correct",onlyACTG(""));
+  mu_assert("Error. onlyACTG not correct",onlyACTG("ACTG"));
+  mu_assert("Error. onlyACTG not correct",onlyACTG("Z")==0);
+  mu_assert("Error. onlyACTG not correct",onlyACTG("ACTGZ")==0);
+  mu_assert("Error. onlyACTG not correct",onlyACTG("ACTGAAAAAAAAAAAAAAAAA-A")==0);
   return(0);
 }
 
-static char * test_bar(){
-  mu_assert("Error. Bar != 7",bar==7);
+
+static char * test_helpers(){
+  char **buffer1, **buffer2;
+  buffer1=(char **)malloc(sizeof(char*)*4);
+  buffer2=(char **)malloc(sizeof(char*)*4);
+  int ii;
+  for(ii=0;ii<4;ii++){
+    buffer1[ii]=(char *)malloc(sizeof(char)*200);
+    buffer2[ii]=(char *)malloc(sizeof(char)*200);
+    sprintf(buffer1[ii],"AAAA%d",ii);
+    sprintf(buffer2[ii],"BBB%d",ii);
+  }
+  switchBuffers((char **) buffer1,(char**) buffer2);
+  //printf("%s\n",buffer1[1]);
+  mu_assert("Error. Buffers not switched",strcmp(buffer1[1],"BBB1")==0 && strcmp(buffer2[3],"AAAA3")==0);
+  //printf("%s\n",buffer1[2]);
+  //printf("%s\n",buffer2[0]);
+  strCat(buffer1[2],buffer2[0]);
+  //printf("%s\n",buffer1[2]);
+  mu_assert("Error. Strings not concatenated",strcmp(buffer1[2],"BBB2AAAA0")==0);
+  for(ii=0;ii<4;ii++){free(buffer1[ii]);free(buffer2[ii]);}
+  free(buffer1);
+  free(buffer2);
   return(0);
 }
 
 static char * all_tests() {
   mu_run_test(test_simpleCharFuncs);
-  mu_run_test(test_bar);
+  mu_run_test(test_helpers);
   return 0;
 }
 
