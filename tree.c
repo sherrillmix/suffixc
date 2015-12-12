@@ -164,6 +164,9 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
   unsigned int depth,charId;
   int tmp;
   size_t n=strlen(query);
+  char *queryCopy;
+  queryCopy=(char*)malloc(sizeof(char)*n+1);
+  strcpy(queryCopy,query);
   //printf("Pointer size: %lu\n",sizeof(int*));
   //store binary for nodes to check out if we need to check splicing (don't need to check if our min pos didn't change)
   int *pathPos=malloc(sizeof(int)*(n+1));//if we start storing multiples, e.g. down multiple paths, then we'll need more
@@ -180,8 +183,8 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
   path[0]=currentNode; 
   bestMatch=1;//Really shouldn't default to success
   for(ii=0;ii<n;ii++){
-    if(query[ii]=='\n')break;//Assuming new line means end of string
-    charId=convertCharToIndex(query[ii]);
+    if(queryCopy[ii]=='\n')break;//Assuming new line means end of string
+    charId=convertCharToIndex(queryCopy[ii]);
     //printf("ii:%d ",ii);
     //appropriate child is not null & we're not passed the position of that child
     if(currentNode->children[charId]!=(struct node*)0 && currentNode->children[charId]->pos[currentNode->children[charId]->nPos-1]>pos){
@@ -204,8 +207,8 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
           //splicing
           if((pathPos[jj]-pathPos[jj-1]>1&&jj>0)||jj==depth){
             //jump to root and try to match the rest, respecting the position of this match
-            tmp=findStringInTree(tree,&query[jj],tree,pathPos[jj],maxMismatch-1);
-            //printf("Splice %d %s<----\n",tmp,&query[jj]);
+            tmp=findStringInTree(tree,&queryCopy[jj],tree,pathPos[jj],maxMismatch-1);
+            //printf("Splice %d %s<----\n",tmp,&queryCopy[jj]);
             if(tmp>0){
               bestMatch=1;
               break; //depth loop
@@ -214,14 +217,14 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
             if(tmp<bestMatch)bestMatch=tmp;
           }
           //mismatch
-          tmpChar=query[jj];
+          tmpChar=queryCopy[jj];
           for(k=0;k<4;k++){
             base=convertIndexToChar(k);
             if(tmpChar==base)continue;
             //substitute char in string here
-            query[jj]=base;
+            queryCopy[jj]=base;
             //printf("%s",&query[jj]);
-            tmp=findStringInTree(tree,&query[jj],path[jj],pathPos[jj],maxMismatch-1); //find best match for remainder of the string with base substituted at the next position
+            tmp=findStringInTree(tree,&queryCopy[jj],path[jj],pathPos[jj],maxMismatch-1); //find best match for remainder of the string with base substituted at the next position
             if(tmp>0){
               bestMatch=1;
               break; //ACTG loop
@@ -230,7 +233,7 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
             //printf("Mismatch %c->%c %d  Best:%d",tmpChar,base,tmp,bestMatch);
             if(tmp<bestMatch)bestMatch=tmp;
           }
-          query[jj]=tmpChar;
+          queryCopy[jj]=tmpChar;
           //printf("\n");
           if(bestMatch>0)break;//depth loop
         }
@@ -240,6 +243,7 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
   }
   free(path);
   free(pathPos);
+  free(queryCopy);
   return(bestMatch);
 }
 
@@ -273,7 +277,7 @@ int revString(const char *str,char *str2){
   for(ii=n-1;ii>=0;ii--){
     str2[n-1-ii]=str[ii];
   }
-  return(str2);
+  return(0);
 }
 
 int strCat(char *str1, const char *str2){

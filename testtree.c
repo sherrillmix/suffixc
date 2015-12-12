@@ -63,9 +63,22 @@ static char * test_helpers(){
   return(0);
 }
 
+static char * test_tree(){
+  struct node *tree; //big suffix tree for aligning
+ // char query[100];
+  //sprintf(query,"%s","ACTG");
+  tree=buildTree("AAAACTGGGGG");
+  mu_assert("Error. String not found",findStringInTree(tree,"ACTG",tree,-1,0)>0);
+  mu_assert("Error. False string found",findStringInTree(tree,"TTTTTT",tree,-1,0)<1);
+  mu_assert("Error. False string found",findStringInTree(tree,"ACTT",tree,-1,0)<1);
+  mu_assert("Error. Close string not found",findStringInTree(tree,"ACTT",tree,-1,1)>0);
+  return(0);
+}
+
 static char * all_tests() {
   mu_run_test(test_simpleCharFuncs);
   mu_run_test(test_helpers);
+  mu_run_test(test_tree);
   return 0;
 }
 
