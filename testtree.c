@@ -72,6 +72,8 @@ static char * test_tree(){
   mu_assert("Error. False string found",findStringInTree(tree,"TTTTTT",tree,-1,0)<1);
   mu_assert("Error. False string found",findStringInTree(tree,"ACTT",tree,-1,0)<1);
   mu_assert("Error. Close string not found",findStringInTree(tree,"ACTT",tree,-1,1)>0);
+  mu_assert("Error. False string found",findStringInTree(tree,"ATTT",tree,-1,1)<1);
+  mu_assert("Error. Close string not found",findStringInTree(tree,"ATTT",tree,-1,2)>0);
   return(0);
 }
 
