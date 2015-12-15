@@ -1,11 +1,15 @@
 #include "tree.h"
 
+//char* getRefFromFasta(file *in,char **buffers){
+	
+//}
+
 //return null pointer if bad
 //assume single seqs/qual per line and no comments
-char** getSeqFromFastq(gzFile *in,char **buffers){
+int getSeqFromFastq(gzFile *in,char **buffers){
   int ii;
 
-  if(gzgets(*in,buffers[0],MAXLINELENGTH)==(char*)0)return((char**)0);
+  if(gzgets(*in,buffers[0],MAXLINELENGTH)==(char*)0)return(0);
   //peak ahead
   //ungetc(tmpChar,in);
   //name,seq,name again,qual
@@ -15,7 +19,7 @@ char** getSeqFromFastq(gzFile *in,char **buffers){
       exit(-99);
     }
   }
-  return(buffers);
+  return(1);
 }
 
 int findMinPos(struct node *node, int pos){
@@ -335,7 +339,7 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
   for(ii=0;ii<8;ii++)args[ii]=(struct fsitArgs *)malloc(sizeof(struct fsitArgs));
   int ans[8];//answer from findStringInTree
   int isMatch,isPartial;
-  char **fastqCheck;//keep track of whether our fastq is empty
+  int fastqCheck;//keep track of whether our fastq is empty
 
   //threads
   pthread_t threads[8];
@@ -359,7 +363,7 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
 
   printf("Scanning file (max mismatch %d, min partial %d, sum match %d)\n",maxMismatch,minPartial,sumMatch);
   fastqCheck=getSeqFromFastq(&in,buffers);
-  while(fastqCheck != (char**)0){
+  while(fastqCheck){
     counter++;
     if(counter%10000==0)printf("Working on read %ld\n",counter);
     if(!onlyACTG(buffers[1])){
