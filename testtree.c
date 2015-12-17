@@ -7,6 +7,49 @@
 #define mu_run_test(test) do { char *message = test(); tests_run++; if (message) return message; } while (0)
 int tests_run;
 
+static char * test_fileFuncs(){
+  char tmp[]="/tmp/XXXXXX";
+  int temp_fd;
+  FILE *uid_file;
+  char buffer[MAXLINELENGTH];
+  char buffer4[4][MAXLINELENGTH];
+  gzFile gzTmp;
+  temp_fd=mkstemp(tmp);
+  uid_file = fdopen(temp_fd,"w");
+  fprintf(uid_file,">Test\nACACATTT\nA\nT\n\nT");
+  fclose(uid_file);
+  gzTmp=gzopen(tmp,"r");
+  getRefFromFasta(&gzTmp,buffer);
+  gzclose(gzTmp);
+  mu_assert("Error. getRefFromFasta not correct",strcmp(buffer,"ACACATTTAT"));
+  
+  strcpy(tmp,"/tmp/XXXXXX");
+  temp_fd=mkstemp(tmp);
+  uid_file = fdopen(temp_fd,"w");
+  fprintf(uid_file,"@Test\nACACATTT\n+\nAAAAAAAA\n@Test2\nGCGCATTTGGG\n+\nAAAAAAAAAAA");
+  fclose(uid_file);
+  gzTmp=gzopen(tmp,"r");
+  getSeqFromFastq(&gzTmp,(char**)buffer4);
+  mu_assert("Error. getSeqFromFastq not correct",strcmp(buffer4[1],"ACACATTT"));
+  mu_assert("Error. Second getSeqFromFastq not correct",strcmp(buffer4[1],"GCGCATTTGGG"));
+  mu_assert("Error. Second getSeqFromFastq not correct",strcmp(buffer4[0],"Test2"));
+  gzclose(gzTmp);
+
+
+
+
+  //char template_name[]="/tmp/cmguiXXXXXX";
+  //int temp_fd;
+
+  //temp_fd=mkstemp(template_name);
+  //uid_file = fdopen(temp_fd,"w");
+
+    //if(gzputs(*out,buffers[ii])==-1)return(0);
+  //char fileName[L_tmpnam];
+  //tmpnam(fileName);
+  //printf("%s",fileName);
+  return(0);
+}
 
 static char * test_simpleCharFuncs(){
   char string1[1000];
@@ -81,6 +124,7 @@ static char * all_tests() {
   mu_run_test(test_simpleCharFuncs);
   mu_run_test(test_helpers);
   mu_run_test(test_tree);
+  mu_run_test(test_fileFuncs);
   return 0;
 }
 
