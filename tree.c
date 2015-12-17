@@ -1,8 +1,13 @@
 #include "tree.h"
 
-//char* getRefFromFasta(file *in,char **buffers){
-	
-//}
+int getRefFromFasta(gzFile *in,char *out){
+  char buffer[MAXLINELENGTH];
+  out[0]='\0';
+  //check if working and trash since we assume only 1 sequence and won't keep the name
+  if(gzgets(*in,buffer,MAXLINELENGTH)==(char*)0)return(0);
+  while(gzgets(*in,buffer,MAXLINELENGTH)!=(char*)0)strCat(out,buffer);
+  return(1);
+}
 
 //return null pointer if bad
 //assume single seqs/qual per line and no comments
