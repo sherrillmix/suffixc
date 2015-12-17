@@ -35,6 +35,14 @@ static char * test_fileFuncs(){
   mu_assert("Error. Second getSeqFromFastq not correct",strcmp(buffer4[0],"Test2"));
   gzclose(gzTmp);
 
+  gzTmp=gzopen(tmp,"w");
+  gzputs(gzTmp,"@Test\nACACATTT\n+\nAAAAAAAA\n@Test2\nGCGCATTTGGG\n+\nAAAAAAAAAAA");
+  gzclose(gzTmp);
+  gzTmp=gzopen(tmp,"r");
+  getSeqFromFastq(&gzTmp,(char**)buffer4);
+  mu_assert("Error. getSeqFromFastq from gz not correct",strcmp(buffer4[1],"ACACATTT"));
+  mu_assert("Error. Second getSeqFromFastq from gz not correct",strcmp(buffer4[1],"GCGCATTTGGG"));
+  mu_assert("Error. Second getSeqFromFastq from gz not correct",strcmp(buffer4[0],"Test2"));
 
 
 
