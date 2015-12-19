@@ -36,7 +36,7 @@ struct fsitArgs{
   char *buffer;
 };
 
-int getRefFromFasta(gzFile *in,char *out);
+int getRefFromFasta(const char *in,char *out);
 int getSeqFromFastq(gzFile *in,char **buffers);
 int findMinPos(struct node *node, int pos);
 void addNodePos(struct node *node,int pos);

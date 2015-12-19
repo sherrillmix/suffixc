@@ -1,11 +1,14 @@
 #include "tree.h"
 
-int getRefFromFasta(gzFile *in,char *out){
+int getRefFromFasta(const char *in,char *out){
   char buffer[MAXLINELENGTH];
+  gzFile inFile;
   out[0]='\0';
+  inFile=gzopen(in,"r");
   //check if working and trash since we assume only 1 sequence and won't keep the name
-  if(gzgets(*in,buffer,MAXLINELENGTH)==(char*)0)return(0);
-  while(gzgets(*in,buffer,MAXLINELENGTH)!=(char*)0)strCat(out,buffer);
+  if(gzgets(inFile,buffer,MAXLINELENGTH)==(char*)0)return(0);
+  while(strlen(buffer)<MAXLINELENGTH && gzgets(inFile,buffer,MAXLINELENGTH-strlen(buffer))!=(char*)0)strCat(out,buffer);
+  gzclose(inFile);
   return(1);
 }
 
