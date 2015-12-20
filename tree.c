@@ -323,7 +323,7 @@ void *findStringInTreePar(void *fsitArgs){
   return(fsitArgs);
 }
 
-void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNames){
+void findReadsInFastq(char* ref, char *fileName, int *parameters,char **outNames){
   int ii,jj; //iterators
   int index; //for filling in answers appropriately
   int maxMismatch=parameters[0]; //at most x mismatch and splices
@@ -352,18 +352,20 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
   //threads
   pthread_t threads[8];
 
-  printf("Building tree\n");
-  tree[0]=buildTree(ref[0]);
-  printf("Building reverse tree\n");
-  revString(ref[0],seqs[0]);
+  fprintf(stderr,"Building tree\n");
+  fprintf(stderr,"Seq %s\n",ref);
+
+  tree[0]=buildTree(ref);
+  fprintf(stderr,"Building reverse tree\n");
+  revString(ref,seqs[0]);
   tree[1]=buildTree(seqs[0]);
 
   printf("%d node trees ready\n",countNodes(tree[0]));
 
 
-  printf("Opening file %s\n",fileName[0]);
+  printf("Opening file %s\n",fileName);
   //I think this should work with uncompressed files too
-  in=gzopen(fileName[0],"rt");
+  in=gzopen(fileName,"rt");
   printf("Opening outFile %s\n",outNames[0]);
   outMatch=gzopen(outNames[0],"w");
   printf("Opening outFile %s\n",outNames[1]);
@@ -434,7 +436,7 @@ void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNam
   for(ii=0;ii<4;ii++)free(buffers2[ii]);
   for(ii=0;ii<4;ii++)free(seqs[ii]);
   for(ii=0;ii<8;ii++)free(args[ii]);
-  printf("Closing file %s\n",fileName[0]);
+  printf("Closing file %s\n",fileName);
   gzclose(in);
   printf("Closing outFiles\n");
   gzclose(outMatch);

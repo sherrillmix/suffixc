@@ -55,7 +55,7 @@ int revString(const char *str,char *str2);
 int strCat(char *str1, const char *str2);
 int switchBuffers(char **buffer1, char **buffer2);
 void *findStringInTreePar(void *fsitArgs);
-void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNames);
+void findReadsInFastq(char* ref, char *fileName, int *parameters,char **outNames);
 char* readFastq(char *fileName);
 
 #endif /*TREE_H*/
