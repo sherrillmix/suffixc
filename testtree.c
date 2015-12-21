@@ -18,9 +18,7 @@ static char * test_fileFuncs(){
   uid_file = fdopen(temp_fd,"w");
   fprintf(uid_file,">Test\nACACATTT\nA\nT\n\nT");
   fclose(uid_file);
-  gzTmp=gzopen(tmp,"r");
-  getRefFromFasta(&gzTmp,buffer);
-  gzclose(gzTmp);
+  getRefFromFasta(tmp,buffer);
   mu_assert("Error. getRefFromFasta not correct",strcmp(buffer,"ACACATTTAT"));
   
   strcpy(tmp,"/tmp/XXXXXX");
