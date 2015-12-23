@@ -113,16 +113,22 @@ static char * test_helpers(){
 }
 
 static char * test_tree(){
-  struct node *tree; //big suffix tree for aligning
+  struct node *tree;
+  struct node *tree2;
  // char query[100];
   //sprintf(query,"%s","ACTG");
   tree=buildTree("AAAACTGGGGG");
+  tree2=buildTree("AAAA");
+  mu_assert("Error. Tree count not correct",countNodes(tree)>0);
+  mu_assert("Error. Tree count not correct",countNodes(tree2)==5);
   mu_assert("Error. String not found",findStringInTree(tree,"ACTG",tree,-1,0)>0);
   mu_assert("Error. False string found",findStringInTree(tree,"TTTTTT",tree,-1,0)<1);
   mu_assert("Error. False string found",findStringInTree(tree,"ACTT",tree,-1,0)<1);
   mu_assert("Error. Close string not found",findStringInTree(tree,"ACTT",tree,-1,1)>0);
   mu_assert("Error. False string found",findStringInTree(tree,"ATTT",tree,-1,1)<1);
   mu_assert("Error. Close string not found",findStringInTree(tree,"ATTT",tree,-1,2)>0);
+  mu_assert("Error. Tree not destroyed",destroyTree(tree)==1);
+  mu_assert("Error. Tree not destroyed",destroyTree(tree2)==1);
   return(0);
 }
 
