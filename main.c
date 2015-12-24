@@ -9,7 +9,9 @@ int main (int argc, char *argv[]){
   char refFile[MAXSTRINGIN+1];
   char fastqFile[MAXSTRINGIN+1];
   char ref[MAXLINELENGTH+1];
-  char outFiles[3][MAXSTRINGIN+101];
+  char **outFiles;
+  outFiles=(char**) malloc(sizeof(char*)*2);
+  for(ii=0;ii<2;ii++)outFiles[ii]=(char*) malloc(sizeof(char)*MAXSTRINGIN+101);
   int params[3];
   sprintf(usage,"Usage: %s ref.fa reads.fastq [-m 2] [-t 4]\n  first argument: a reference sequence in a fasta file (if this is much more than 10kb then we could get memory problems)\n  second argument: a fastq file containing the reads to search\n  -t: (optional) specify how many threads to use (default: 2)\n  -m: (optional) specify how many mismatches to tolerate (default: 00)\n  -h: (optional) display this message and exit\n",argv[0]);
   while ((c = getopt (argc, argv, "hm:t:")) != -1){
@@ -58,16 +60,17 @@ int main (int argc, char *argv[]){
   params[2]=15;
   strcpy(outFiles[0],"test1.tmp");
   strcpy(outFiles[1],"test2.tmp");
-  strcpy(outFiles[2],"test3.tmp");
 
-  fprintf (stderr,"outFile1: %s", outFiles[0]);
-  fprintf (stderr,"outFile2: %s", outFiles[1]);
+  fprintf (stderr,"outFile1: %s\n", outFiles[0]);
+  fprintf (stderr,"outFile2: %s\n", outFiles[1]);
 
 
-  findReadsInFastq(ref, fastqFile, params,(char**)outFiles);
+  findReadsInFastq(ref, fastqFile, params,outFiles);
 
 
   //void findReadsInFastq(char** ref, char **fileName, int *parameters,char **outNames){
 
+  for(ii=0;ii<2;ii++)free(outFiles[ii]);
+  free(outFiles);
   return 0;
 }

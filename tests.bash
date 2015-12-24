@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 
 
 tmpDir=$(mktemp -d)

@@ -7,9 +7,23 @@ int getRefFromFasta(const char *in,char *out){
   inFile=gzopen(in,"r");
   //check if working and trash since we assume only 1 sequence and won't keep the name
   if(gzgets(inFile,buffer,MAXLINELENGTH)==(char*)0)return(0);
-  while(strlen(buffer)<MAXLINELENGTH && gzgets(inFile,buffer,MAXLINELENGTH-strlen(buffer))!=(char*)0)strCat(out,buffer);
+  while(strlen(buffer)<MAXLINELENGTH && gzgets(inFile,buffer,MAXLINELENGTH-strlen(buffer))!=(char*)0){
+	  trimSeq(buffer);
+	  strCat(out,buffer);
+  }
   gzclose(inFile);
   return(1);
+}
+
+int trimSeq(char *seq){
+	int ii;
+	for(ii=strlen(seq);ii>0;ii--){
+		//fprintf(stderr,"%d:'%c ?:%d-%d'\n",ii,seq[ii],isspace(seq[ii]),iscntrl(seq[ii]));
+		//low asciis are control characters
+		if((int)seq[ii]<33)seq[ii]='\0';
+		else break;
+	}
+	return(1);	
 }
 
 //return null pointer if bad
@@ -113,18 +127,16 @@ struct node* buildTree(char *s1) {
   head=createNode(-1);
   size_t n=strlen(s1);
   int ii,jj;
-  //head->hasChildren[1]=99;
-  //printf("%d",head->hasChildren[1]);
 
   //could do this in linear instead of n^2 if necessary
   //also could be more efficient in memory
   for(ii=n-1;ii>=0;ii--){
-    //printf("ii:%d\n",ii);
+    //fprintf(stderr,"ii:%d\n",ii);
     currentNode=head;
     for(jj=ii;jj<n;jj++){
-      //printf("jj:%d\n",jj);
       thisChar=s1[jj];
       charId=convertCharToIndex(thisChar);
+      //fprintf(stderr,"jj:%d=%c:%d\n",jj,thisChar,charId);
       //check if currentNode's child is filled
       if(currentNode->children[charId]==(struct node*)0){
         //Add node
@@ -149,9 +161,11 @@ unsigned int countNodes(struct node *tree){
   unsigned int ii;
   if(tree==(struct node*)0)return(count);//catch empty tree
   for(ii=0;ii<4;ii++){
+	 //fprintf(stderr,"Node: %d\n",ii);
     if(tree->children[ii]!=(struct node*)0)count+=countNodes(tree->children[ii]);
   }
   count++;
+  //fprintf(stderr,"Leaving node. Count %d\n",count);
   return(count);
 }
 
@@ -162,7 +176,7 @@ int destroyTree(struct node *tree){
   }
   free(tree->pos);
   free(tree);
-  return(0);
+  return(1);
 }
 
 
@@ -272,7 +286,7 @@ int onlyACTG(char *read){
   unsigned int counter=0;
   while(read[counter]!='\0'&&read[counter]!='\n'){
     if(convertCharToIndex(read[counter])>3){
-      //printf("Bad: %c -> %u\n",read[counter],convertCharToIndex(read[counter]));
+      //fprintf(stderr,"Bad: %c -> %u\n",read[counter],convertCharToIndex(read[counter]));
       return(0);
     }
     counter++;
@@ -353,29 +367,28 @@ void findReadsInFastq(char* ref, char *fileName, int *parameters,char **outNames
   pthread_t threads[8];
 
   fprintf(stderr,"Building tree\n");
-  fprintf(stderr,"Seq %s\n",ref);
+  //fprintf(stderr,"Seq ..%s..\n",ref);
 
   tree[0]=buildTree(ref);
   fprintf(stderr,"Building reverse tree\n");
   revString(ref,seqs[0]);
   tree[1]=buildTree(seqs[0]);
 
-  printf("%d node trees ready\n",countNodes(tree[0]));
+  fprintf(stderr,"%u node trees ready\n",countNodes(tree[0]));
 
-
-  printf("Opening file %s\n",fileName);
+  fprintf(stderr,"Opening fastq file %s\n",fileName);
   //I think this should work with uncompressed files too
   in=gzopen(fileName,"rt");
-  printf("Opening outFile %s\n",outNames[0]);
+  fprintf(stderr,"Opening outFile %s\n",outNames[0]);
   outMatch=gzopen(outNames[0],"w");
-  printf("Opening outFile %s\n",outNames[1]);
+  fprintf(stderr,"Opening outFile %s\n",outNames[1]);
   outPartial=gzopen(outNames[1],"w");
 
-  printf("Scanning file (max mismatch %d, min partial %d, sum match %d)\n",maxMismatch,minPartial,sumMatch);
+  fprintf(stderr,"Scanning file (max mismatch %d, min partial %d, sum match %d)\n",maxMismatch,minPartial,sumMatch);
   fastqCheck=getSeqFromFastq(&in,buffers);
   while(fastqCheck){
     counter++;
-    if(counter%10000==0)printf("Working on read %ld\n",counter);
+    if(counter%10000==0)fprintf(stderr,"Working on read %ld\n",counter);
     if(!onlyACTG(buffers[1])){
       //write somewhere else?
       //printf("Bad read %ld: %s\n",counter,buffers[1]);
@@ -431,17 +444,17 @@ void findReadsInFastq(char* ref, char *fileName, int *parameters,char **outNames
     switchBuffers(buffers,buffers2);
     //ignore bad matches for now
   }
-  printf("All done. Found %ld matches, %ld partials from %ld reads\n",matchCounter,partialCounter,counter);
+  fprintf(stderr,"All done. Found %ld matches, %ld partials from %ld reads\n",matchCounter,partialCounter,counter);
   for(ii=0;ii<4;ii++)free(buffers[ii]);
   for(ii=0;ii<4;ii++)free(buffers2[ii]);
   for(ii=0;ii<4;ii++)free(seqs[ii]);
   for(ii=0;ii<8;ii++)free(args[ii]);
-  printf("Closing file %s\n",fileName);
+  fprintf(stderr,"Closing file %s\n",fileName);
   gzclose(in);
-  printf("Closing outFiles\n");
+  fprintf(stderr,"Closing outFiles\n");
   gzclose(outMatch);
   gzclose(outPartial);
-  printf("Destroying trees\n");
+  fprintf(stderr,"Destroying trees\n");
   for(ii=0;ii<2;ii++) destroyTree(tree[ii]);
   return;
 }
