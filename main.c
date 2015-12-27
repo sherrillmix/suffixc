@@ -62,8 +62,10 @@ int main (int argc, char *argv[]){
   params[0]=1;
   params[1]=15;
   params[2]=15;
-  strCat(outFiles[0],"_match.fastq");
-  strCat(outFiles[1],"_partial.fastq");
+  strcpy(outFiles[0],outPrefix);
+  strcpy(outFiles[1],outPrefix);
+  strCat(outFiles[0],"_match.fastq.gz");
+  strCat(outFiles[1],"_partial.fastq.gz");
 
   fprintf (stderr,"outFile1: %s\n", outFiles[0]);
   fprintf (stderr,"outFile2: %s\n", outFiles[1]);
