@@ -33,7 +33,7 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 CTCTCTCTCTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACTCTCTCTCTAAAAA
 END
 
-tmpDir=$(mktemp)
+tmpDir=$(mktemp -d)
 
 ./treefind 2>/dev/null && { echo "Missing files did not fail"; exit 1; }
 ./treefind $refFile 2>/dev/null && { echo "Missing file did not fail"; exit 1; }
