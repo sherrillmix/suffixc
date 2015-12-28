@@ -59,7 +59,7 @@ int main (int argc, char *argv[]){
   }
   fprintf (stderr,"nMismatch: %d\nnThread: %d\nrefFile: %s\nfastqFile: %s\noutPrefix: %s\n", nMismatch, nThread,refFile,fastqFile,outPrefix);
   getRefFromFasta(refFile,ref);
-  params[0]=1;
+  params[0]=nMismatch;
   params[1]=15;
   params[2]=15;
   strcpy(outFiles[0],outPrefix);
