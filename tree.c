@@ -206,7 +206,7 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
   int bestMatch;
   char base, tmpChar;
 
-  fprintf(stderr,"Running on %zu char string (%s) with %d mismatch.\n",n,query,maxMismatch);
+  //fprintf(stderr,"Running on %zu char string (%s) with %d mismatch.\n",n,query,maxMismatch);
 
   pathPos[0]=pos; 
   path[0]=currentNode; 
@@ -217,7 +217,7 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
     //printf("ii:%d ",ii);
     //appropriate child is not null & we're not passed the position of that child
     if(currentNode->children[charId]!=(struct node*)0 && currentNode->children[charId]->pos[currentNode->children[charId]->nPos-1]>pos){
-      fprintf(stderr,"Match\n");
+      //fprintf(stderr,"Match\n");
       currentNode=currentNode->children[charId];
       tmp=findMinPos(currentNode,pos);
       pos=tmp;
@@ -226,7 +226,7 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
       path[depth]=currentNode;
       pathPos[depth]=pos;
     }else{
-      fprintf(stderr,"Break at depth %d for ii: %d\n",depth,ii);
+      //fprintf(stderr,"Break at depth %d for ii: %d\n",depth,ii);
       bestMatch=-depth; //kind of dangerous probably should do another way
       //printf("Break\n");
       //break in string
@@ -270,7 +270,7 @@ int findStringInTree(struct node *tree,char *query,struct node *currentNode, int
       break; //could do an insertion here
     }
   }
-  fprintf(stderr,"%s: %d\n",query,bestMatch);
+  //fprintf(stderr,"%s: %d\n",query,bestMatch);
   free(path);
   free(pathPos);
   free(queryCopy);
@@ -344,7 +344,6 @@ void *findStringInTreePar(void *fsitArgs){
 
 void findReadsInFastq(char* ref, char *fileName, int *parameters,char **outNames){
   int ii,jj; //iterators
-  int index; //for filling in answers appropriately
   int maxMismatch=parameters[0]; //at most x mismatch and splices
   int minPartial=parameters[1]; //require x length to call partial match, if left and right partial then call a match 
   //int sumMatch=parameters[2]; //if left length + right length > x, call a match
