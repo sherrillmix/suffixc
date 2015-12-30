@@ -1,5 +1,4 @@
 #include "tree.h"
-#include <ctype.h>
 
 int main (int argc, char *argv[]){
   int nMismatch=0, minLength=20;
@@ -36,7 +35,7 @@ int main (int argc, char *argv[]){
         fprintf(stderr,"%s",usage);
         return(3);
       case '?':
-        if (isprint (optopt))
+        if (optopt<33)
           fprintf (stderr, "Unknown option `-%c'.\n", optopt);
         else
           fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
