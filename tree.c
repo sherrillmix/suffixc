@@ -347,7 +347,7 @@ void findReadsInFastq(char* ref, char *fileName, int *parameters,char **outNames
   int index; //for filling in answers appropriately
   int maxMismatch=parameters[0]; //at most x mismatch and splices
   int minPartial=parameters[1]; //require x length to call partial match, if left and right partial then call a match 
-  int sumMatch=parameters[2]; //if left length + right length > x, call a match
+  //int sumMatch=parameters[2]; //if left length + right length > x, call a match
   struct node *tree[2]; //big suffix tree for aligning
   gzFile in,outMatch,outPartial; //file pointer for fastqs
   //line buffers
@@ -390,7 +390,7 @@ void findReadsInFastq(char* ref, char *fileName, int *parameters,char **outNames
   fprintf(stderr,"Opening outFile %s\n",outNames[1]);
   outPartial=gzopen(outNames[1],"w");
 
-  fprintf(stderr,"Scanning file (max mismatch %d, min partial %d, sum match %d)\n",maxMismatch,minPartial,sumMatch);
+  fprintf(stderr,"Scanning file (max mismatch %d, min partial %d)\n",maxMismatch,minPartial);
   fastqCheck=getSeqFromFastq(&in,buffers);
   while(fastqCheck){
     counter++;
@@ -428,7 +428,7 @@ void findReadsInFastq(char* ref, char *fileName, int *parameters,char **outNames
     isMatch=0;
     isPartial=0;
     for(ii=0;ii<2;ii++){
-      if(ans[ii]>0||ans[ii+2]>0||(ans[ii]< -minPartial&&ans[ii+2]< -minPartial)||(ans[ii]+ans[ii+2])< -sumMatch)isMatch=1; //found a match, or both side have partial, or sum of sides enough
+      if(ans[ii]>0||ans[ii+2]>0||(ans[ii]< -minPartial&&ans[ii+2]< -minPartial))isMatch=1; //found a match, or both side have partial, or sum of sides enough
       if(ans[ii]< -minPartial||ans[ii+2]< -minPartial)isPartial=1;
       sprintf(tmpStr,":%d|%d",-ans[ii],-ans[ii+2]);
       strCat(buffers[0],tmpStr);
