@@ -45,14 +45,18 @@ END
 ./treefind $refFile $fastqFile -m2 2>/dev/null || { echo "Running with 2 mismatch failed"; exit 1; }
 ./treefind $refFile $fastqFile -m2 -t4 2>/dev/null || { echo "Running with 2 mismatch and 4 thread failed"; exit 1; }
 
-./treefind $refFile $fastqFile -o $tmpDir/test 2>/dev/null || { echo "Running with output file set to /tmp failed"; exit 1; }
-zcat $tmpDir/test_match.fastq.gz |grep seq1 >/dev/null && { echo "seq1 erroneously found in match"; exit 1; }
+cmd="./treefind $refFile $fastqFile -o $tmpDir/test"
+echo $cmd
+$cmd 2>/dev/null || { echo "Running with output file set to /tmp failed"; exit 1; }
+zcat $tmpDir/test_match.fastq.gz |grep seq1 >/dev/null || { echo "seq1 not found in match"; exit 1; }
 zcat $tmpDir/test_match.fastq.gz |grep seq2 >/dev/null || { echo "seq2 not found in match"; exit 1; }
 zcat $tmpDir/test_match.fastq.gz |grep seq3 >/dev/null && { echo "seq3 erroneously found in match"; exit 1; }
 zcat $tmpDir/test_partial.fastq.gz |grep seq3 >/dev/null && { echo "seq3 erroneously found in partial"; exit 1; }
 
-./treefind $refFile $fastqFile -o $tmpDir/test -m 0 || { echo "Running with output file set to /tmp failed"; exit 1; }
-zcat $tmpDir/test_match.fastq.gz |grep seq1 >/dev/null || { echo "seq1 not found in match"; exit 1; }
+cmd="./treefind $refFile $fastqFile -o $tmpDir/test -m 0"
+echo $cmd
+$cmd || { echo "Running with mismatch 0 failed"; exit 1; }
+zcat $tmpDir/test_match.fastq.gz |grep seq1 >/dev/null && { echo "seq1 erroneously found in match"; exit 1; }
 zcat $tmpDir/test_match.fastq.gz |grep seq2 >/dev/null || { echo "seq2 not found in match"; exit 1; }
 zcat $tmpDir/test_match.fastq.gz |grep seq3 >/dev/null && { echo "seq3 erroneously found in match"; exit 1; }
 zcat $tmpDir/test_partial.fastq.gz |grep seq3 >/dev/null && { echo "seq3 erroneously found in partial"; exit 1; }
