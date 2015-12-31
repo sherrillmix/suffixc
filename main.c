@@ -16,7 +16,7 @@ int main (int argc, char *argv[]){
   for(ii=0;ii<2;ii++)outFiles[ii]=(char*) malloc(sizeof(char)*MAXSTRINGIN+101);
   int params[2];
   //\n  -t: (optional) specify how many threads to use (default: 2)
-  sprintf(usage,"Usage: %s ref.fa reads.fastq [-m 2] [-t 4]\n  first argument: a reference sequence in a fasta file (if this is much more than 10kb then we could get memory problems)\n  second argument: a fastq file containing the reads to search\n  -o: (optional) the output prefix for outfiles (default: suffixrOut)\n  -l: (optional) specify how many long a match has to be considered a partial match. A partial match on both ends counts as a match (default: 20)\n  -m: (optional) specify how many mismatches to tolerate (default: 0)\n  -h: (optional) display this message and exit\n",argv[0]);
+  sprintf(usage,"Usage: %s ref.fa reads.fastq [-m 2] [-t 4]\n  first argument: a reference sequence in a fasta file (if this is much more than 10kb then we could get memory problems)\n  second argument: a fastq file containing the reads to search\n  -o: (optional) the output prefix for outfiles (default: suffixrOut)\n  -l: (optional) specify how long a match has to be considered a partial match. A partial match on both ends counts as a match (default: 20)\n  -m: (optional) specify how many mismatches to tolerate (default: 0)\n  -h: (optional) display this message and exit\n",argv[0]);
   while ((c = getopt (argc, argv, "hm:t:o:l:")) != -1){
     switch (c){
       case 'l':
