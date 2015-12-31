@@ -62,7 +62,7 @@ int main (int argc, char *argv[]){
         break;
     }
   }
-  fprintf (stderr,"nMismatch: %d\nrefFile: %s\nfastqFile: %s\noutPrefix: %s\n", nMismatch,refFile,fastqFile,outPrefix);
+  fprintf (stderr,"nMismatch: %d\nminLength: %d\nrefFile: %s\nfastqFile: %s\noutPrefix: %s\n", nMismatch,minLength,refFile,fastqFile,outPrefix);
   getRefFromFasta(refFile,ref);
   params[0]=nMismatch;
   params[1]=minLength;
