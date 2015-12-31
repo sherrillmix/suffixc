@@ -427,8 +427,8 @@ void findReadsInFastq(char* ref, char *fileName, int *parameters,char **outNames
     isMatch=0;
     isPartial=0;
     for(ii=0;ii<2;ii++){
-      if(ans[ii]>0||ans[ii+2]>0||(ans[ii]< -minPartial&&ans[ii+2]< -minPartial))isMatch=1; //found a match, or both side have partial, or sum of sides enough
-      if(ans[ii]< -minPartial||ans[ii+2]< -minPartial)isPartial=1;
+      if(ans[ii]>0||ans[ii+2]>0||(ans[ii]<= -minPartial&&ans[ii+2]<= -minPartial))isMatch=1; //found a match, or both side have partial, or sum of sides enough
+      if(ans[ii]<= -minPartial||ans[ii+2]<= -minPartial)isPartial=1;
       sprintf(tmpStr,":%d|%d",-ans[ii],-ans[ii+2]);
       strCat(buffers[0],tmpStr);
     }
