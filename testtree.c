@@ -83,6 +83,12 @@ static char * test_simpleCharFuncs(){
   mu_assert("Error. onlyACTG not correct",onlyACTG("Z")==0);
   mu_assert("Error. onlyACTG not correct",onlyACTG("ACTGZ")==0);
   mu_assert("Error. onlyACTG not correct",onlyACTG("ACTGAAAAAAAAAAAAAAAAA-A")==0);
+  strcpy(string1,"Test       \n");
+  trimSeq(string1); 
+  mu_assert("Error. trimSeq not correct",strcmp("Test",string1)==0);
+  strcpy(string1," \nTes  t       \n\r");
+  trimSeq(string1); 
+  mu_assert("Error. trimSeq not correct",strcmp(" \nTes  t",string1)==0);
   return(0);
 }
 
