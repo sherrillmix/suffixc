@@ -22,7 +22,7 @@ int getRefFromFasta(const char *in,char *out){
 int trimSeq(char *seq){
 	int ii;
   size_t n=strlen(seq);
-	for(ii=n;ii>0;ii--){
+	for(ii=n;ii>=0;ii--){
 		//fprintf(stderr,"%d:'%c ?:%d-%d'\n",ii,seq[ii],isspace(seq[ii]),iscntrl(seq[ii]));
 		//low asciis are control characters
 		if((int)seq[ii]<33)seq[ii]='\0';
@@ -293,7 +293,7 @@ int writeSeqToFastq(gzFile *out, char **buffers){
 
 int onlyACTG(char *read){
   unsigned int counter=0;
-  while(read[counter]!='\0'&&read[counter]!='\n'){
+  while(read[counter]!='\0'){
     if(convertCharToIndex(read[counter])>3){
       //fprintf(stderr,"Bad: %c -> %u\n",read[counter],convertCharToIndex(read[counter]));
       return(0);
