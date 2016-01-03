@@ -15,12 +15,6 @@ make
 
 ## Usage
 ```
-Usage: ./suffixc ref.fa reads.fastq [-m 2] [-t 4]
-  first argument: a reference sequence in a fasta file (if this is much more than 10kb then we could get memory problems)
-  second argument: a fastq file containing the reads to search
-  -o: (optional) the output prefix for outfiles (default: suffixcOut)
-  -l: (optional) specify how long a match has to be considered a partial match. A partial match on both ends counts as a match (default: 20)
-  -m: (optional) specify how many mismatches to tolerate (default: 0)
-  -h: (optional) display this message and exit
+##USAGEHERE##
 ```
 

@@ -9,6 +9,10 @@ int getRefFromFasta(const char *in,char *out){
   if(gzgets(inFile,buffer,MAXLINELENGTH)==(char*)0)return(0);
   while(strlen(buffer)<MAXLINELENGTH && gzgets(inFile,buffer,MAXLINELENGTH-strlen(buffer))!=(char*)0){
 	  trimSeq(buffer);
+	  if(!onlyACTG(buffer)){
+		  fprintf(stderr,"Non ACTG found in ref: %s\n",buffer);
+		  exit(10);
+	  }
 	  strCat(out,buffer);
   }
   gzclose(inFile);
