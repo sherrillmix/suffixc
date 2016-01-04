@@ -55,7 +55,7 @@ echo "AAAAAAAAAAAAAAAXAAAAAAAAAAAAAAAAAAAAAAAAAA" >> $nonActgRefFile
 
 ./suffixc 2>/dev/null && { echo "Missing files did not fail"; exit 1; }
 ./suffixc $refFile 2>/dev/null && { echo "Missing file did not fail"; exit 1; }
-./suffixc -h $refFile $fastqFile 2>/dev/null | grep Usage:|| { echo "-h did not display usage"; exit 1; }
+./suffixc -h $refFile $fastqFile 2>/dev/null | grep Usage: >/dev/null|| { echo "-h did not display usage"; exit 1; }
 ./suffixc -z $refFile $fastqFile 2>/dev/null && { echo "Weird argument did not fail"; exit 1; }
 ./suffixc -s 10 $refFile $fastqFile 2>/dev/null && { echo "Weird argument did not fail"; exit 1; }
 ./suffixc -$'\05' $refFile $fastqFile 2>/dev/null && { echo "Weird argument did not fail"; exit 1; }
