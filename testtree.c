@@ -133,6 +133,7 @@ static char * test_tree(){
   mu_assert("Error. Close string not found",findStringInTree(tree,"ACTT",tree,-1,1)>0);
   mu_assert("Error. False string found",findStringInTree(tree,"ATTT",tree,-1,1)<1);
   mu_assert("Error. Close string not found",findStringInTree(tree,"ATTT",tree,-1,2)>0);
+  mu_assert("Error. findMinPos error not -99",findMinPos(tree,9999999)==-99); //how to suppress warning here?
   mu_assert("Error. Tree not destroyed",destroyTree(tree)==1);
   mu_assert("Error. Tree not destroyed",destroyTree(tree2)==1);
   return(0);
