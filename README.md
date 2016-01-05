@@ -1,4 +1,5 @@
 # suffixC: Simple suffix tree for short reference sequences
+[![Build Status](https://travis-ci.org/sherrillmix/suffixc.svg?branch=master)](https://travis-ci.org/sherrillmix/suffixc)
 
 ## Introduction
 `suffixC` is a simple C program to align a fastq against a shortish reference sequence (around 10kb) using a suffix tree allowing for a small number of mismatches. Partial alignments are preserved in a separate file, useful for finding chimeric reads. It is most useful as a prefilter to pull out reads for alignment using a slower, more accurate program.
