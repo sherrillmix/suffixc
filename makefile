@@ -1,4 +1,4 @@
-all: suffixc README.md
+all: suffixc 
 .PHONY: all
 
 suffixc: tree.c main.c makefile
