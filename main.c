@@ -41,6 +41,7 @@ int main (int argc, char *argv[]){
         return 1;
     }
   }
+  return(5);
 
   if(optind!=argc-2){
     fprintf(stderr,"%s",usage);
