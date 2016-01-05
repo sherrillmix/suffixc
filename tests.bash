@@ -53,4 +53,4 @@ cp $refFile $nonActgRefFile
 echo "AAAAAAAAAAAAAAAXAAAAAAAAAAAAAAAAAAAAAAAAAA" >> $nonActgRefFile
 
 
-./suffixc && { echo "Missing files did not fail"; exit 1; }
+./suffixc 
