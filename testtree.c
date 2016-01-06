@@ -121,6 +121,11 @@ static char * test_helpers(){
 static char * test_tree(){
   struct node *tree;
   struct node *tree2;
+  char buf[1000+1];
+  int outPipe[2];
+  int oldStderr;
+  buf[0]='\0';
+  oldStderr = dup(STDERR_FILENO); 
  // char query[100];
   //sprintf(query,"%s","ACTG");
   tree=buildTree("AAAACTGGGGG");
@@ -133,7 +138,16 @@ static char * test_tree(){
   mu_assert("Error. Close string not found",findStringInTree(tree,"ACTT",tree,-1,1)>0);
   mu_assert("Error. False string found",findStringInTree(tree,"ATTT",tree,-1,1)<1);
   mu_assert("Error. Close string not found",findStringInTree(tree,"ATTT",tree,-1,2)>0);
-  mu_assert("Error. findMinPos error not -99",findMinPos(tree,9999999)==-99); //how to suppress warning here?
+
+
+  pipe(outPipe);
+  dup2(outPipe[1], STDERR_FILENO);   /* redirect stderr to pipe */
+  close(outPipe[1]);
+  mu_assert("Error. findMinPos error not -99",findMinPos(tree,9999999)==-99);
+  fflush(stderr);
+  read(outPipe[0], buf, 1000);
+  dup2(oldStderr, STDERR_FILENO); /* turn stderr back on */
+  mu_assert("Error. findMinPos did not warn",strlen(buf)>0);
   mu_assert("Error. Tree not destroyed",destroyTree(tree)==1);
   mu_assert("Error. Tree not destroyed",destroyTree(tree2)==1);
   return(0);
