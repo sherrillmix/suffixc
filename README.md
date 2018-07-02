@@ -17,7 +17,7 @@ make
 
 ## Usage
 ```
-Usage: ./suffixc ref.fa reads.fastq [-m 2] [-t 4]
+Usage: ./suffixc ref.fa reads.fastq [-o suffixcOut] [-l 20] [-m 0] [-h]
   first argument: a reference sequence in a fasta file (if this is much more than 10kb then we could get memory problems)
   second argument: a fastq file containing the reads to search
   -o: (optional) the output prefix for outfiles (default: suffixcOut)
